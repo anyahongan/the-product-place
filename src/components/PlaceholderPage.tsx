@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Sheet, Tape, Paperclip, Label, HandArrow } from "./paper/Paper";
+import { Sheet, Tape, Clip, Label, Arrow, Tab } from "./paper/Paper";
 import { Reveal } from "./paper/Reveal";
 
 const areas = [
@@ -27,73 +27,61 @@ export function PlaceholderPage({
 }) {
   return (
     <main className="relative overflow-hidden px-5 pb-28 pt-14 sm:px-8">
-      <div
-        aria-hidden
-        className="gridpaper pointer-events-none absolute inset-0 -z-10 opacity-40"
-      />
-      <div className="mx-auto max-w-[1000px]">
-        <Reveal from="down" distance={26}>
-          <Label>{kicker}</Label>
-          <h1 className="mt-3 max-w-[16ch] text-[clamp(2.4rem,7vw,4.4rem)] leading-[0.95]">
+      <div aria-hidden className="grid-bold pointer-events-none absolute inset-0 -z-10 opacity-60" />
+      <div className="mx-auto max-w-[1320px]">
+        <Reveal from="down" distance={30}>
+          <Tab color={tone}>{kicker}</Tab>
+          <h1 className="mt-4 font-display text-[clamp(2.8rem,11vw,7rem)] font-black uppercase leading-[0.8]">
             {title}
           </h1>
         </Reveal>
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-          <Reveal from="left" distance={40} rotate={-1}>
-            <Sheet
-              tone={tone}
-              pattern={pattern}
-              tilt={-0.5}
-              edge="torn-bottom"
-              className="group px-7 pb-14 pt-10 sm:px-11"
-            >
-              <Tape className="-top-3 left-10" color={tone} angle={-5} />
-              <p className="max-w-[52ch] font-display text-[1.28rem] leading-[1.5] text-ink">
+          <Reveal from="left" distance={80} rotate={-2}>
+            <Sheet tone={tone} soft pattern={pattern} shadow="hard" className="group px-6 pb-12 pt-10 sm:px-10">
+              <Tape className="-top-4 left-10" color={tone} angle={-5} width={140} />
+              <p className="max-w-[48ch] font-display text-[clamp(1.2rem,3vw,1.7rem)] font-extrabold uppercase leading-[1.02] text-ink">
                 {blurb}
               </p>
               <ul className="mt-8 space-y-3">
                 {bullets.map((b) => (
                   <li key={b} className="flex items-start gap-3 text-[0.98rem] text-ink-soft">
-                    <span
-                      aria-hidden
-                      className="mt-[0.42rem] h-[7px] w-[7px] shrink-0 rotate-45 border border-ink-faint"
-                    />
+                    <span aria-hidden className="mt-[0.4rem] h-[10px] w-[10px] shrink-0 bg-ink" />
                     {b}
                   </li>
                 ))}
               </ul>
-              <p className="hand mt-9 text-[1.15rem] text-ink-faint">
-                not built yet — we&apos;re approving the visual language first
+              <p className="tag mt-9 text-ink-faint">
+                Not built yet — approving the visual language first
               </p>
             </Sheet>
           </Reveal>
 
-          <Reveal from="right" distance={44} rotate={1.6} delay={0.1}>
-            <Sheet tone="warm" tilt={1.4} className="relative px-7 py-9">
-              <Paperclip className="absolute -top-4 right-8" />
-              <Label>Elsewhere in the notebook</Label>
-              <ul className="mt-5 space-y-1">
+          <Reveal from="right" distance={80} rotate={2} delay={0.08}>
+            <Sheet tone="paper" shadow="hard-sm" tilt={1} className="relative px-6 py-8">
+              <Clip className="absolute -top-6 right-8 z-30" angle={10} color="ink" />
+              <Label>Elsewhere in the workspace</Label>
+              <ul className="mt-5 space-y-2">
                 {areas
                   .filter((a) => a.label.toLowerCase() !== title.toLowerCase())
                   .map((a) => (
                     <li key={a.to}>
                       <Link
                         to={a.to}
-                        className="focus-ink ink-underline inline-block py-1 font-display text-[1.35rem] text-ink focus:outline-none"
+                        className="focus-ink swipe-underline inline-block font-display text-[1.3rem] font-black uppercase text-ink focus:outline-none"
                       >
                         {a.label}
                       </Link>
                     </li>
                   ))}
               </ul>
-              <div className="mt-6 flex items-center gap-1">
-                <HandArrow flip className="h-6 w-12" />
+              <div className="mt-6 flex items-center gap-2">
+                <Arrow flip className="h-7 w-16 text-pink" />
                 <Link
                   to="/"
-                  className="focus-ink hand text-[1.15rem] text-pink focus:outline-none"
+                  className="focus-ink tag border-2 border-ink bg-yellow px-3 py-2 text-ink focus:outline-none"
                 >
-                  back to today
+                  Back to today
                 </Link>
               </div>
             </Sheet>
