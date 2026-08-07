@@ -30,14 +30,14 @@ export function DailyFive() {
       {/* oversized edition number in the negative space */}
       <motion.p
         aria-hidden
-        style={reduced ? undefined : { y: numberY }}
+        style={reduced ? {} : { y: numberY }}
         className="pointer-events-none absolute -left-6 top-10 select-none font-display text-[26vw] leading-none text-ink/[0.045] sm:-left-10"
       >
         128
       </motion.p>
 
       <motion.div
-        style={reduced ? undefined : { scale, rotate }}
+        style={reduced ? {} : { scale, rotate }}
         className="relative mx-auto max-w-[1080px]"
       >
         <Sheet
