@@ -34,7 +34,8 @@ export function Hero() {
       <motion.div
         aria-hidden
         initial={reduced ? false : { x: "-100%" }}
-        animate={{ x: 0 }}
+        whileInView={{ x: 0 }}
+        viewport={{ once: true }}
         transition={{ duration: 0.8, ease: [0.2, 0.9, 0.2, 1] }}
         className="pointer-events-none absolute -left-10 top-[38%] -z-10 h-[26vh] w-[46vw] border-2 border-ink bg-blue-wash"
         style={{ rotate: "-4deg" }}
@@ -48,7 +49,8 @@ export function Hero() {
       <div className="relative mx-auto max-w-[1320px] px-5 sm:px-8">
         <motion.div
           initial={reduced ? false : { x: -40, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
+          whileInView={{ x: 0, opacity: 1 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.5 }}
           className="flex flex-wrap items-center gap-3"
         >
@@ -68,7 +70,8 @@ export function Hero() {
                   ? false
                   : { x: i % 2 === 0 ? -160 : 190, opacity: 0, skewX: i === 1 ? -8 : 6 }
               }
-              animate={{ x: 0, opacity: 1, skewX: 0 }}
+              whileInView={{ x: 0, opacity: 1, skewX: 0 }}
+              viewport={{ once: true }}
               transition={{
                 duration: 0.55,
                 delay: 0.1 + i * 0.12,
@@ -88,7 +91,8 @@ export function Hero() {
           <motion.span
             aria-hidden
             initial={reduced ? false : { scaleX: 0 }}
-            animate={{ scaleX: 1 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.5, ease: [0.2, 0.9, 0.2, 1] }}
             className="tape absolute -left-[10vw] top-[42%] h-[34px] w-[86vw] origin-left"
             style={{ rotate: "-2.4deg", ["--tape-color" as string]: "var(--pink)" }}
@@ -98,7 +102,8 @@ export function Hero() {
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
           <motion.div
             initial={reduced ? false : { y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.55 }}
           >
             <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3.4vw,2.5rem)] font-extrabold uppercase leading-[0.95] tracking-[-0.03em]">
@@ -106,7 +111,8 @@ export function Hero() {
               <motion.span
                 className="hl"
                 initial={reduced ? false : { ["--hl-scale" as string]: 0 }}
-                animate={{ ["--hl-scale" as string]: 1 }}
+                whileInView={{ ["--hl-scale" as string]: 1 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 1 }}
               >
                 Ten minutes.
@@ -123,7 +129,8 @@ export function Hero() {
           <motion.div
             style={reduced ? {} : { y: cardY, rotate: stampRotate }}
             initial={reduced ? false : { y: -80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.2, 0.9, 0.2, 1] }}
             className="relative justify-self-start lg:justify-self-end"
           >
