@@ -216,7 +216,7 @@ function PracticeGlimpse() {
               distance={46}
               rotate={tilts[i]!}
               delay={i * 0.07}
-              className={nudge[i]}
+              className={nudge[i] ?? ""}
             >
               <motion.div
                 whileHover={reduced ? {} : { y: -8, rotate: 0 }}
