@@ -8,6 +8,7 @@ type RevealProps = {
   from?: Direction;
   distance?: number;
   rotate?: number;
+  scale?: number;
   delay?: number;
   duration?: number;
   className?: string;
@@ -15,14 +16,15 @@ type RevealProps = {
   amount?: number;
 };
 
-/** Slides / rotates a paper element into position as it enters the viewport. */
+/** Snaps a graphic element into position as it enters the viewport. Snappy, not floaty. */
 export function Reveal({
   children,
   from = "up",
-  distance = 42,
+  distance = 56,
   rotate = 0,
+  scale = 1,
   delay = 0,
-  duration = 0.85,
+  duration = 0.55,
   className,
   once = true,
   amount = 0.25,
@@ -45,10 +47,10 @@ export function Reveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, ...offset, rotate: rotate }}
-      whileInView={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
+      initial={{ opacity: 0, ...offset, rotate, scale }}
+      whileInView={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
       viewport={{ once, amount }}
-      transition={{ duration, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration, delay, ease: [0.2, 0.9, 0.2, 1] }}
     >
       {children}
     </motion.div>

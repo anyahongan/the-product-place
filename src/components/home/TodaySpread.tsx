@@ -1,29 +1,36 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "motion/react";
-import { Sheet, Tape, Paperclip, Label, HandArrow } from "@/components/paper/Paper";
-import { Parallax } from "@/components/paper/Parallax";
+import { motion, useInView, useReducedMotion } from "motion/react";
+import { Sheet, Tape, Clip, Label, Arrow } from "@/components/paper/Paper";
 import { useTasks } from "@/hooks/useTasks";
 
-function Checkbox({ done, onClick }: { done: boolean; onClick: () => void }) {
+function Check({ done, onClick }: { done: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={done}
       aria-label={done ? "Mark as not done" : "Mark as done"}
-      className="focus-ink group/box relative mt-[0.2rem] grid h-[19px] w-[19px] shrink-0 place-items-center border border-ink-faint/80 bg-paper/60 transition-colors hover:border-ink focus:outline-none"
+      className="focus-ink relative mt-[0.15rem] grid h-[22px] w-[22px] shrink-0 place-items-center border-2 border-ink bg-paper transition-colors hover:bg-yellow focus:outline-none"
     >
-      <svg viewBox="0 0 20 20" className="h-[15px] w-[15px] text-green">
+      <motion.span
+        aria-hidden
+        className="absolute inset-0 bg-green"
+        initial={false}
+        animate={{ scale: done ? 1 : 0 }}
+        transition={{ duration: 0.16, ease: [0.2, 0.9, 0.2, 1] }}
+        style={{ transformOrigin: "bottom left" }}
+      />
+      <svg viewBox="0 0 20 20" className="relative h-[14px] w-[14px] text-ink">
         <motion.path
-          d="M3 11.2 7.6 15.6 17 4.6"
+          d="M3 11 7.6 15.6 17 4"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
+          strokeWidth="3.2"
+          strokeLinecap="square"
           initial={false}
           animate={{ pathLength: done ? 1 : 0, opacity: done ? 1 : 0 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.2 }}
         />
       </svg>
     </button>
@@ -34,112 +41,137 @@ export function TodaySpread() {
   const { tasks, add, toggle, remove } = useTasks();
   const [draft, setDraft] = useState("");
   const reduced = useReducedMotion();
-  const openCount = tasks.filter((t) => !t.done).length;
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.3 });
+  const open = tasks.filter((t) => !t.done).length;
+
+  const play = reduced || inView;
 
   return (
     <section
-      aria-label="Today"
-      className="relative overflow-hidden px-4 pb-24 pt-10 sm:px-8 sm:pb-32"
+      aria-label="Today's list"
+      className="relative overflow-hidden px-5 pb-28 pt-20 sm:px-8"
     >
-      {/* graph paper backdrop, drifting slower than the page */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <Parallax speed={reduced ? 0 : 60} className="absolute -inset-y-32 inset-x-0">
-          <div className="gridpaper h-full w-full opacity-55" />
-        </Parallax>
+        <div className="gridpaper absolute inset-0 opacity-40" />
       </div>
 
-      <div className="mx-auto grid max-w-[1180px] gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start lg:gap-0">
-        {/* left page — the date, written */}
-        <motion.div
-          initial={reduced ? false : { opacity: 0, y: 26, rotate: -2.4 }}
-          animate={{ opacity: 1, y: 0, rotate: -1.3 }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 lg:mr-[-4%] lg:mt-16"
-        >
-          <Sheet
-            tone="warm"
-            pattern="dots"
-            edge="torn-bottom"
-            className="px-7 pb-16 pt-9 sm:px-10"
-          >
-            <Tape className="-top-3 left-8" color="pink" angle={-7} width={104} />
-            <Label>Friday</Label>
-            <p className="mt-2 font-display text-[clamp(2.6rem,8vw,4.1rem)] leading-[0.88] tracking-tight">
-              October
+      {/* oversized section number, cropped by the left edge */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -left-4 top-8 select-none font-display text-[22vw] font-black leading-none tracking-[-0.06em] text-ink/[0.055]"
+      >
+        01
+      </span>
+
+      <div ref={ref} className="relative mx-auto max-w-[1320px]">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1.25fr] lg:items-start lg:gap-6">
+          <div className="relative z-10">
+            <motion.h2
+              initial={reduced ? false : { y: 40, opacity: 0 }}
+              animate={play ? { y: 0, opacity: 1 } : {}}
+              transition={{ duration: 0.5 }}
+              className="font-display text-[clamp(2.6rem,8vw,5.2rem)] font-black leading-[0.8]"
+            >
+              TODAY&apos;S
               <br />
-              <span className="text-pink">08</span>
-            </p>
-            <p className="mt-5 max-w-[26ch] text-[0.96rem] leading-relaxed text-ink-soft">
-              Your Product Place is open. Five things live here — apply, network,
-              learn, create, practice — and today only asks for a little of each.
-            </p>
+              <span className="text-pink">LIST</span>
+            </motion.h2>
 
-            <div className="mt-7 border-t border-dashed border-border pt-5">
-              <p className="hand text-[1.35rem] leading-tight text-ink">
-                {openCount === 0
-                  ? "list's clear. go build something."
-                  : `${openCount} thing${openCount === 1 ? "" : "s"} still open`}
-              </p>
-              <HandArrow className="mt-1 -rotate-6 text-pink/70" />
+            <div className="mt-6 flex items-center gap-4">
+              <span className="border-2 border-ink bg-ink px-3 py-1 tag text-paper">
+                {open === 0 ? "All clear" : `${open} open`}
+              </span>
+              <Arrow className="h-8 w-20 text-pink" delay={0.4} />
             </div>
-          </Sheet>
-        </motion.div>
 
-        {/* right page — the actual list */}
-        <motion.div
-          initial={reduced ? false : { opacity: 0, x: 40, rotate: 1.8 }}
-          animate={{ opacity: 1, x: 0, rotate: 0.5 }}
-          transition={{ duration: 1.05, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="relative"
-        >
-          <Sheet
-            tone="paper"
-            className="margin-line group relative px-5 pb-9 pt-8 shadow-lift sm:px-8"
+            <p className="mt-6 max-w-[32ch] text-[1rem] leading-relaxed text-ink-soft">
+              Not a dashboard. A page you actually mark up. It saves on this
+              device, so the list is waiting where you left it.
+            </p>
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link
+                to="/practice"
+                className="focus-ink swipe-underline font-display text-[0.95rem] font-extrabold uppercase tracking-tight text-ink focus:outline-none"
+              >
+                Warm up a prompt
+              </Link>
+              <Link
+                to="/apply"
+                className="focus-ink swipe-underline font-display text-[0.95rem] font-extrabold uppercase tracking-tight text-blue focus:outline-none"
+              >
+                Open the tracker
+              </Link>
+            </div>
+          </div>
+
+          {/* the artifact: sheet slides in, rotates flat, tape stretches, lines reveal, clip lands */}
+          <motion.div
+            initial={reduced ? false : { x: 120, y: 40, rotate: 5, opacity: 0 }}
+            animate={play ? { x: 0, y: 0, rotate: -1.1, opacity: 1 } : {}}
+            transition={{ duration: 0.62, ease: [0.2, 0.9, 0.2, 1] }}
+            className="relative lg:-mt-6 lg:-mr-[6vw]"
           >
-            <Paperclip className="absolute -top-5 right-10 z-20" angle={12} />
+            <Sheet
+              tone="paper"
+              shadow="hard"
+              className="group relative px-5 pb-8 pt-9 sm:px-9"
+            >
+              <motion.span
+                aria-hidden
+                className="tape absolute -left-8 top-6 h-[30px] w-[58%] origin-left"
+                style={{ rotate: "-2deg", ["--tape-color" as string]: "var(--blue)" }}
+                initial={reduced ? false : { scaleX: 0 }}
+                animate={play ? { scaleX: 1 } : {}}
+                transition={{ duration: 0.45, delay: 0.35, ease: [0.2, 0.9, 0.2, 1] }}
+              />
+              <motion.div
+                initial={reduced ? false : { y: -46, opacity: 0 }}
+                animate={play ? { y: 0, opacity: 1 } : {}}
+                transition={{ duration: 0.4, delay: 0.75 }}
+                className="absolute -top-6 right-8 z-30"
+              >
+                <Clip angle={6} color="pink" />
+              </motion.div>
 
-            <div className="pl-8 sm:pl-9">
-              <div className="flex items-baseline justify-between gap-4">
-                <h2 className="text-[1.7rem] leading-none sm:text-[2rem]">
-                  Today / to-do
-                </h2>
-                <Label className="hidden sm:inline">saved on this device</Label>
+              <div className="mt-8 flex items-end justify-between gap-4 border-b-4 border-ink pb-2">
+                <h3 className="font-display text-[1.5rem] font-black">
+                  The list
+                </h3>
+                <Label>Saved on this device</Label>
               </div>
 
-              <ul className="mt-6 ruled">
+              <ul className="mt-2">
                 {tasks.map((task, i) => (
                   <motion.li
                     key={task.id}
                     layout={!reduced}
-                    initial={reduced ? false : { opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.45, delay: reduced ? 0 : i * 0.03 }}
-                    className="group/item flex h-8 items-start gap-3"
+                    initial={reduced ? false : { x: -24, opacity: 0 }}
+                    animate={play ? { x: 0, opacity: 1 } : {}}
+                    transition={{ duration: 0.3, delay: 0.45 + i * 0.07 }}
+                    className="group/item flex items-start gap-3 border-b border-rule py-[0.6rem]"
                   >
-                    <Checkbox done={task.done} onClick={() => toggle(task.id)} />
-                    <span className="relative min-w-0 flex-1 truncate pt-[0.05rem] text-[0.99rem]">
-                      <span
-                        className={
-                          task.done ? "text-ink-faint" : "text-ink"
-                        }
-                      >
+                    <Check done={task.done} onClick={() => toggle(task.id)} />
+                    <span className="relative min-w-0 flex-1 text-[1rem] leading-tight">
+                      <span className={task.done ? "text-ink-faint" : "text-ink"}>
                         {task.text}
                       </span>
                       <motion.span
                         aria-hidden
-                        className="absolute left-0 top-[0.72rem] h-[1.5px] bg-ink-faint"
+                        className="absolute left-0 top-[0.55rem] h-[3px] bg-pink"
                         initial={false}
                         animate={{ width: task.done ? "100%" : "0%" }}
-                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: 0.24, ease: [0.2, 0.9, 0.2, 1] }}
                       />
                     </span>
                     <button
                       type="button"
                       onClick={() => remove(task.id)}
                       aria-label={`Delete "${task.text}"`}
-                      className="focus-ink hand shrink-0 text-[1.1rem] leading-none text-ink-faint opacity-0 transition-opacity hover:text-pink focus:outline-none group-hover/item:opacity-100 focus-visible:opacity-100"
+                      className="focus-ink tag shrink-0 text-ink-faint opacity-0 transition-all hover:text-pink focus:outline-none group-hover/item:opacity-100 focus-visible:opacity-100"
                     >
-                      ✕
+                      DEL
                     </button>
                   </motion.li>
                 ))}
@@ -151,48 +183,34 @@ export function TodaySpread() {
                   add(draft);
                   setDraft("");
                 }}
-                className="mt-3 flex h-8 items-center gap-3 border-b border-rule"
+                className="mt-4 flex items-center gap-3 border-2 border-dashed border-ink/40 p-2"
               >
-                <span
-                  aria-hidden
-                  className="h-[19px] w-[19px] shrink-0 border border-dashed border-ink-faint/60"
-                />
+                <span aria-hidden className="h-[22px] w-[22px] shrink-0 border-2 border-ink/40" />
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="write the next one…"
+                  placeholder="Write the next one…"
                   aria-label="Add a task"
-                  className="focus-ink hand min-w-0 flex-1 bg-transparent pb-1 text-[1.25rem] text-ink placeholder:text-ink-faint/70 focus:outline-none"
+                  className="focus-ink min-w-0 flex-1 bg-transparent text-[1rem] text-ink placeholder:text-ink-faint focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="focus-ink shrink-0 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-ink-faint transition-colors hover:text-blue focus:outline-none"
+                  className="focus-ink tag shrink-0 border-2 border-ink bg-yellow px-3 py-[0.35rem] text-ink transition-transform hover:-translate-y-[2px] focus:outline-none"
                 >
-                  add
+                  Add
                 </button>
               </form>
+            </Sheet>
 
-              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2">
-                <Link
-                  to="/practice"
-                  className="focus-ink ink-underline text-[0.86rem] font-medium uppercase tracking-[0.14em] text-ink-soft focus:outline-none"
-                >
-                  Warm up a prompt
-                </Link>
-                <Link
-                  to="/apply"
-                  className="focus-ink ink-underline text-[0.86rem] font-medium uppercase tracking-[0.14em] text-ink-soft focus:outline-none"
-                >
-                  Open the tracker
-                </Link>
-              </div>
-            </div>
-          </Sheet>
-
-          <p className="hand mt-4 pl-6 text-[1.18rem] text-ink-faint lg:absolute lg:-right-6 lg:bottom-[-3.2rem] lg:mt-0 lg:max-w-[13ch] lg:rotate-[-3deg] lg:pl-0">
-            check one off before you open anything else
-          </p>
-        </motion.div>
+            <Tape
+              className="-bottom-4 left-10"
+              color="yellow"
+              angle={4}
+              width={140}
+              variant="check"
+            />
+          </motion.div>
+        </div>
       </div>
     </section>
   );

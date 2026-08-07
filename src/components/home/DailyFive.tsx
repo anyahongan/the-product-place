@@ -1,6 +1,6 @@
 import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "motion/react";
-import { Sheet, Tape, Paperclip, Label } from "@/components/paper/Paper";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { Sheet, Tape, Clip, Label, Arrow, Tab } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { dailyFive } from "@/data/content";
 
@@ -9,129 +9,146 @@ export function DailyFive() {
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start end", "end start"],
+    offset: ["start start", "end end"],
   });
 
-  // the spread widens and settles as it comes into view
-  const scale = useTransform(scrollYProgress, [0, 0.32], [0.955, 1]);
-  const rotate = useTransform(scrollYProgress, [0, 0.32], [-1.6, 0]);
-  const numberY = useTransform(scrollYProgress, [0, 1], [70, -70]);
+  const bigScale = useTransform(scrollYProgress, [0, 0.35, 1], [1.25, 1, 0.72]);
+  const bigX = useTransform(scrollYProgress, [0, 1], ["0%", "-6%"]);
+  const gridY = useTransform(scrollYProgress, [0, 1], [-80, 80]);
 
   return (
     <section
-      ref={ref}
       aria-label="Daily five-minute"
-      className="relative overflow-hidden bg-paper-blue/50 px-4 py-24 sm:px-8 sm:py-32"
+      className="relative overflow-hidden border-b-2 border-ink bg-ink text-paper"
     >
-      <div
-        aria-hidden
-        className="gridpaper pointer-events-none absolute inset-0 opacity-70"
-      />
-      {/* oversized edition number in the negative space */}
-      <motion.p
-        aria-hidden
-        style={reduced ? {} : { y: numberY }}
-        className="pointer-events-none absolute -left-6 top-10 select-none font-display text-[26vw] leading-none text-ink/[0.045] sm:-left-10"
-      >
-        128
-      </motion.p>
-
       <motion.div
-        style={reduced ? {} : { scale, rotate }}
-        className="relative mx-auto max-w-[1080px]"
+        aria-hidden
+        style={reduced ? {} : { y: gridY }}
+        className="pointer-events-none absolute -inset-y-32 inset-x-0 opacity-[0.18]"
       >
-        <Sheet
-          tone="paper"
-          edge="torn-top"
-          className="group relative px-5 pb-14 pt-14 shadow-lift sm:px-12 sm:pt-16"
-        >
-          <Tape className="-top-2 left-1/2 -ml-14" color="blue" angle={2} width={116} />
-          <Paperclip className="absolute -left-3 top-24 z-20" angle={-96} size={54} />
+        <div
+          className="h-full w-full"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, var(--paper) 1px, transparent 1px), linear-gradient(to bottom, var(--paper) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+      </motion.div>
 
-          {/* masthead */}
-          <header className="border-b border-ink/15 pb-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <Label>
-                {dailyFive.kicker} · {dailyFive.edition}
-              </Label>
-              <Label>{dailyFive.date}</Label>
-            </div>
-            <h2 className="mt-4 text-[clamp(2.6rem,9vw,5.6rem)] leading-[0.86] tracking-[-0.03em]">
-              {dailyFive.topic}
-            </h2>
-            <p className="mt-4 max-w-[46ch] font-display text-[1.15rem] italic leading-snug text-ink-soft sm:text-[1.35rem]">
-              {dailyFive.subtitle}
+      <div ref={ref} className="relative mx-auto max-w-[1320px] px-5 pb-28 pt-16 sm:px-8">
+        <div className="flex flex-wrap items-center gap-4">
+          <Tab color="yellow">Section 03 — Learn</Tab>
+          <Label className="text-paper/70">
+            {dailyFive.edition} — {dailyFive.date}
+          </Label>
+        </div>
+
+        <div className="mt-10 grid gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14">
+          {/* the pinned typographic showpiece */}
+          <div className="lg:sticky lg:top-24 lg:h-[68vh] lg:self-start">
+            <motion.div
+              style={reduced ? {} : { scale: bigScale, x: bigX }}
+              className="origin-top-left"
+            >
+              <span className="block font-display text-[clamp(6rem,20vw,15rem)] font-black leading-[0.72] tracking-[-0.06em] text-yellow">
+                5
+              </span>
+              <span className="block font-display text-[clamp(3rem,9vw,6.4rem)] font-black leading-[0.78] tracking-[-0.05em] text-paper">
+                MIN
+              </span>
+              <span className="block font-display text-[clamp(3rem,9vw,6.4rem)] font-black leading-[0.78] tracking-[-0.05em] text-pink">
+                READ
+              </span>
+            </motion.div>
+            <p className="tag relative z-10 mt-10 max-w-[26ch] text-paper/60">
+              {dailyFive.kicker} — one idea, explained straight, then why a PM
+              should care.
             </p>
-          </header>
+            <Arrow className="mt-4 h-9 w-24 rotate-6 text-green" />
+          </div>
 
-          <div className="mt-9 grid gap-10 lg:grid-cols-[1.35fr_0.9fr] lg:gap-14">
-            {/* left: explainer, set like a column of type */}
-            <Reveal from="up" distance={26} className="min-w-0">
-              <div className="flex items-center gap-3">
-                <span className="grid h-[34px] w-[34px] place-items-center rounded-full border border-ink/25 font-display text-[0.9rem]">
-                  5
-                </span>
-                <span className="hand text-[1.2rem] text-ink-faint">
-                  {dailyFive.readingTime}
-                </span>
-              </div>
-              <p className="mt-5 text-[1.06rem] leading-[1.72] text-ink first-letter:float-left first-letter:mr-2 first-letter:font-display first-letter:text-[3.4rem] first-letter:leading-[0.78] first-letter:text-blue">
-                {dailyFive.explainer}
+          {/* fragments assembling around it */}
+          <div className="space-y-8">
+            <Reveal from="right" distance={90}>
+              <h2 className="font-display text-[clamp(2.4rem,6.4vw,4.4rem)] font-black leading-[0.84] text-paper">
+                {dailyFive.topic}
+              </h2>
+              <p className="mt-4 max-w-[44ch] text-[1.1rem] leading-snug text-paper/75">
+                {dailyFive.subtitle}
               </p>
+            </Reveal>
 
-              <div className="relative mt-9 pl-6">
-                <span
-                  aria-hidden
-                  className="absolute left-0 top-1 h-[calc(100%-0.5rem)] w-[3px] bg-pink/45"
-                />
-                <Label>Why it matters for PM</Label>
-                <p className="mt-2 text-[1.02rem] leading-[1.68] text-ink-soft">
+            <Reveal from="up" distance={60} delay={0.05}>
+              <Sheet tone="paper" shadow="none" className="relative px-6 py-7 sm:px-8">
+                <Tape className="-top-3 left-8" color="blue" angle={-5} width={120} />
+                <Clip className="absolute -right-4 -top-6 z-30" angle={12} color="purple" />
+                <p className="text-[1.02rem] leading-[1.7] text-ink">
+                  {dailyFive.explainer}
+                </p>
+              </Sheet>
+            </Reveal>
+
+            <Reveal from="left" distance={70} delay={0.05}>
+              <div className="border-l-[6px] border-green pl-5">
+                <Label className="text-paper/60">Why it matters for PM</Label>
+                <p className="mt-2 max-w-[52ch] text-[1.02rem] leading-[1.65] text-paper/85">
                   {dailyFive.whyItMatters}
                 </p>
               </div>
             </Reveal>
 
-            {/* right: takeaways note tucked under the column */}
-            <Reveal from="right" distance={48} rotate={2.2} delay={0.08}>
-              <Sheet
-                tone="yellow"
-                pattern="ruled"
-                tilt={1.6}
-                className="px-6 pb-8 pt-7"
-              >
-                <Tape className="-top-3 right-6" color="green" angle={9} width={78} />
-                <Label>Take away exactly two things</Label>
-                <ol className="mt-4 space-y-5">
+            <Reveal from="up" distance={50} delay={0.05}>
+              <Sheet tone="yellow" shadow="hard-sm" tilt={-0.8} className="px-6 py-7 sm:px-8">
+                <h3 className="font-display text-[1.5rem] font-black text-ink">
+                  Take away exactly two things
+                </h3>
+                <ol className="mt-5 space-y-5">
                   {dailyFive.takeaways.map((t, i) => (
-                    <li key={t} className="flex gap-3">
-                      <span className="hand shrink-0 text-[1.5rem] leading-none text-pink">
-                        {i + 1}.
+                    <motion.li
+                      key={t}
+                      initial={reduced ? false : { x: -20, opacity: 0 }}
+                      whileInView={{ x: 0, opacity: 1 }}
+                      viewport={{ once: true, amount: 0.6 }}
+                      transition={{ duration: 0.32, delay: 0.12 + i * 0.14 }}
+                      className="flex gap-4"
+                    >
+                      <span className="grid h-8 w-8 shrink-0 place-items-center border-2 border-ink bg-ink font-display text-[1rem] font-black text-yellow">
+                        {i + 1}
                       </span>
-                      <p className="text-[0.97rem] leading-[1.6] text-ink">{t}</p>
-                    </li>
+                      <p className="text-[1rem] leading-[1.55] text-ink">{t}</p>
+                    </motion.li>
                   ))}
                 </ol>
-                <p className="hand mt-7 -rotate-1 text-[1.2rem] leading-tight text-ink-faint">
-                  {dailyFive.margin}
-                </p>
+                <motion.p
+                  className="mt-6 w-max font-display text-[1.05rem] font-extrabold uppercase text-ink"
+                  initial={reduced ? false : { opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <span className="border-2 border-ink px-2 py-1">
+                    {dailyFive.margin}
+                  </span>
+                </motion.p>
               </Sheet>
+            </Reveal>
 
-              <div className="mt-7 flex flex-wrap items-baseline gap-x-5 gap-y-2">
+            <Reveal from="up" distance={30} delay={0.2}>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t-2 border-paper/25 pt-6">
                 <a
                   href="#"
                   onClick={(e) => e.preventDefault()}
-                  className="focus-ink ink-underline font-display text-[1.3rem] text-ink focus:outline-none"
+                  className="focus-ink swipe-underline font-display text-[1.15rem] font-extrabold uppercase text-yellow focus:outline-none"
                 >
                   Read the full five minutes
                 </a>
-                <span className="text-[0.78rem] uppercase tracking-[0.18em] text-ink-faint">
-                  {dailyFive.source}
-                </span>
+                <span className="tag text-paper/55">{dailyFive.source}</span>
               </div>
             </Reveal>
           </div>
-        </Sheet>
-      </motion.div>
+        </div>
+      </div>
     </section>
   );
 }
