@@ -1,24 +1,50 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { TodaySpread } from "@/components/home/TodaySpread";
+import { DeadlinesStack } from "@/components/home/DeadlinesStack";
+import { DailyFive } from "@/components/home/DailyFive";
+import { Glimpses } from "@/components/home/Glimpses";
+import { Label } from "@/components/paper/Paper";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "The Product Place — A planner for future PMs" },
+      {
+        name: "description",
+        content:
+          "A personal workspace for students pursuing product management: today's to-do, internship deadlines, and a daily five-minute product lesson.",
+      },
+      {
+        property: "og:title",
+        content: "The Product Place — A planner for future PMs",
+      },
+      {
+        property: "og:description",
+        content:
+          "Apply, network, learn, create and practice — kept in one interactive paper notebook.",
+      },
+    ],
+  }),
+  component: Home,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Home() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="relative">
+      <TodaySpread />
+      <DeadlinesStack />
+      <DailyFive />
+      <Glimpses />
+
+      <footer className="border-t border-border px-4 py-14 sm:px-8">
+        <div className="mx-auto flex max-w-[1180px] flex-wrap items-baseline justify-between gap-4">
+          <p className="font-display text-[1.3rem]">The Product Place</p>
+          <p className="hand text-[1.2rem] text-ink-faint">
+            close the notebook. come back tomorrow.
+          </p>
+          <Label>Visual prototype · v0.1</Label>
+        </div>
+      </footer>
+    </main>
   );
 }
