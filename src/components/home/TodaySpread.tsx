@@ -51,7 +51,7 @@ export function TodaySpread() {
       <div className="mx-auto grid max-w-[1180px] gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start lg:gap-0">
         {/* left page — the date, written */}
         <motion.div
-          initial={reduced ? undefined : { opacity: 0, y: 26, rotate: -2.4 }}
+          initial={reduced ? false : { opacity: 0, y: 26, rotate: -2.4 }}
           animate={{ opacity: 1, y: 0, rotate: -1.3 }}
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-10 lg:mr-[-4%] lg:mt-16"
@@ -87,7 +87,7 @@ export function TodaySpread() {
 
         {/* right page — the actual list */}
         <motion.div
-          initial={reduced ? undefined : { opacity: 0, x: 40, rotate: 1.8 }}
+          initial={reduced ? false : { opacity: 0, x: 40, rotate: 1.8 }}
           animate={{ opacity: 1, x: 0, rotate: 0.5 }}
           transition={{ duration: 1.05, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           className="relative"
@@ -111,7 +111,7 @@ export function TodaySpread() {
                   <motion.li
                     key={task.id}
                     layout={!reduced}
-                    initial={reduced ? undefined : { opacity: 0, x: -10 }}
+                    initial={reduced ? false : { opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.45, delay: reduced ? 0 : i * 0.03 }}
                     className="group/item flex h-8 items-start gap-3"
