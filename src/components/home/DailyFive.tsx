@@ -61,7 +61,7 @@ export function DailyFive() {
                 READ
               </span>
             </motion.div>
-            <p className="tag mt-6 max-w-[26ch] text-paper/60">
+            <p className="tag relative z-10 mt-10 max-w-[26ch] text-paper/60">
               {dailyFive.kicker} — one idea, explained straight, then why a PM
               should care.
             </p>
@@ -127,7 +127,7 @@ export function DailyFive() {
                   viewport={{ once: true }}
                   transition={{ delay: 0.5 }}
                 >
-                  <span className="hl" style={{ ["--hl-scale" as string]: 1, background: "transparent" }}>
+                  <span className="border-2 border-ink px-2 py-1">
                     {dailyFive.margin}
                   </span>
                 </motion.p>
