@@ -22,7 +22,7 @@ const entry = [
 function Ticket({ item, index }: { item: Deadline; index: number }) {
   const reduced = useReducedMotion();
   const e = entry[index % 4]!;
-  const offset = ["lg:ml-0", "lg:ml-[10%]", "lg:ml-[4%]", "lg:ml-[14%]"][index % 4];
+  const offset = ["lg:ml-0", "lg:ml-[10%]", "lg:ml-[4%]", "lg:ml-[14%]"][index % 4] ?? "";
 
   return (
     <Reveal

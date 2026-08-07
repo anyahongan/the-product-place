@@ -101,7 +101,7 @@ export function Hero() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.55 }}
           >
-            <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3.4vw,2.5rem)] font-800 uppercase leading-[0.95] tracking-[-0.03em]">
+            <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3.4vw,2.5rem)] font-extrabold uppercase leading-[0.95] tracking-[-0.03em]">
               Five things.{" "}
               <motion.span
                 className="hl"

@@ -93,13 +93,13 @@ export function TodaySpread() {
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 to="/practice"
-                className="focus-ink swipe-underline font-display text-[0.95rem] font-800 uppercase tracking-tight text-ink focus:outline-none"
+                className="focus-ink swipe-underline font-display text-[0.95rem] font-extrabold uppercase tracking-tight text-ink focus:outline-none"
               >
                 Warm up a prompt
               </Link>
               <Link
                 to="/apply"
-                className="focus-ink swipe-underline font-display text-[0.95rem] font-800 uppercase tracking-tight text-blue focus:outline-none"
+                className="focus-ink swipe-underline font-display text-[0.95rem] font-extrabold uppercase tracking-tight text-blue focus:outline-none"
               >
                 Open the tracker
               </Link>
