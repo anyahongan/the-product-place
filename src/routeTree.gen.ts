@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApplyRouteImport } from './routes/apply'
+import { Route as LearnRouteImport } from './routes/learn'
 import { Route as NetworkRouteImport } from './routes/network'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const ApplyRoute = ApplyRouteImport.update({
   path: '/apply',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NetworkRoute = NetworkRouteImport.update({
   id: '/network',
   path: '/network',
@@ -32,30 +38,34 @@ const NetworkRoute = NetworkRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/apply': typeof ApplyRoute
+  '/learn': typeof LearnRoute
   '/network': typeof NetworkRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/apply': typeof ApplyRoute
+  '/learn': typeof LearnRoute
   '/network': typeof NetworkRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/apply': typeof ApplyRoute
+  '/learn': typeof LearnRoute
   '/network': typeof NetworkRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apply' | '/network'
+  fullPaths: '/' | '/apply' | '/learn' | '/network'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apply' | '/network'
-  id: '__root__' | '/' | '/apply' | '/network'
+  to: '/' | '/apply' | '/learn' | '/network'
+  id: '__root__' | '/' | '/apply' | '/learn' | '/network'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApplyRoute: typeof ApplyRoute
+  LearnRoute: typeof LearnRoute
   NetworkRoute: typeof NetworkRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/network': {
       id: '/network'
       path: '/network'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApplyRoute: ApplyRoute,
+  LearnRoute: LearnRoute,
   NetworkRoute: NetworkRoute,
 }
 export const routeTree = rootRouteImport
