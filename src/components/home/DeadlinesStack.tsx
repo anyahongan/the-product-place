@@ -1,95 +1,101 @@
-import { useState } from "react";
+import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "motion/react";
-import { Sheet, Tape, Label, HandArrow } from "@/components/paper/Paper";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { Sheet, Tape, Label, Arrow, Tab } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { deadlines, type Deadline } from "@/data/content";
 
-const statusInk: Record<Deadline["status"], string> = {
-  "Not started": "text-ink-faint",
-  Drafting: "text-blue",
-  Submitted: "text-green",
-  Interviewing: "text-purple",
+const statusBlock: Record<Deadline["status"], string> = {
+  "Not started": "bg-paper-2 text-ink",
+  Drafting: "bg-blue text-paper",
+  Submitted: "bg-green text-ink",
+  Interviewing: "bg-purple text-paper",
 };
 
-function Slip({ item, index }: { item: Deadline; index: number }) {
+const entry = [
+  { from: "left" as const, rotate: -4 },
+  { from: "right" as const, rotate: 4 },
+  { from: "up" as const, rotate: -2.5 },
+  { from: "right" as const, rotate: 3 },
+];
+
+function Ticket({ item, index }: { item: Deadline; index: number }) {
   const reduced = useReducedMotion();
-  const [open, setOpen] = useState(false);
-  const tilt = [-1.4, 1.1, -0.8, 1.6][index % 4]!;
-  const offset = [0, 34, 12, 46][index % 4]!;
+  const e = entry[index % 4]!;
+  const offset = ["lg:ml-0", "lg:ml-[10%]", "lg:ml-[4%]", "lg:ml-[14%]"][index % 4];
 
   return (
     <Reveal
-      from={index % 2 === 0 ? "left" : "right"}
-      distance={70}
-      rotate={index % 2 === 0 ? -3 : 3}
-      delay={index * 0.07}
-      className="relative"
-      amount={0.4}
+      from={e.from}
+      distance={130}
+      rotate={e.rotate}
+      delay={index * 0.09}
+      amount={0.35}
+      className={offset}
     >
       <motion.article
-        onHoverStart={() => setOpen(true)}
-        onHoverEnd={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        whileHover={reduced ? {} : { x: 8, y: -4 }}
+        transition={{ duration: 0.18, ease: [0.2, 0.9, 0.2, 1] }}
         tabIndex={0}
-        whileHover={reduced ? {} : { x: 6, rotate: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="focus-ink group relative outline-none"
-        style={{ marginLeft: `clamp(0px, ${offset}px, 6vw)` }}
       >
         <Sheet
           tone={item.tone}
-          pattern="grid-fine"
-          tilt={tilt}
-          className="relative pb-6 pl-6 pr-5 pt-7 sm:pl-9 sm:pr-8"
+          soft
+          shadow="hard-sm"
+          edge="corner-cut"
+          tilt={index % 2 ? 0.6 : -0.7}
+          className="relative grid gap-4 px-5 py-6 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-7 sm:px-8"
         >
-          {/* torn index tab riding the top edge */}
-          <span
-            aria-hidden
-            className="absolute -top-[15px] left-6 h-[17px] w-[86px] bg-paper shadow-slip transition-transform duration-500 group-hover:-translate-y-[3px]"
-            style={{ clipPath: "polygon(6px 0, 80px 0, 86px 100%, 0 100%)" }}
-          />
-          <Tape
-            className="-right-3 top-6"
-            color={item.tone}
-            angle={78}
-            width={70}
-          />
-
-          <div className="grid gap-x-6 gap-y-1 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div className="min-w-0">
-              <Label>{item.grad} grads</Label>
-              <h3 className="mt-1 truncate text-[1.45rem] leading-tight sm:text-[1.7rem]">
-                {item.company}
-              </h3>
-              <p className="text-[0.95rem] text-ink-soft">{item.role}</p>
-            </div>
-            <div className="flex items-end gap-4 sm:flex-col sm:items-end sm:gap-0">
-              <p className="font-display text-[1.6rem] leading-none">
-                {item.deadline}
-              </p>
-              <p className="hand text-[1.1rem] text-ink-faint">{item.due}</p>
-            </div>
+          {/* the date as a real block of colour */}
+          <div
+            className="flex w-max items-baseline gap-2 border-2 border-ink px-3 py-2"
+            style={{ background: `var(--${item.tone})` }}
+          >
+            <span
+              className={`font-display text-[2.1rem] font-black leading-none tracking-[-0.04em] ${
+                item.tone === "yellow" || item.tone === "green" ? "text-ink" : "text-paper"
+              }`}
+            >
+              {item.deadline.split(" ")[1]}
+            </span>
+            <span
+              className={`tag ${
+                item.tone === "yellow" || item.tone === "green" ? "text-ink" : "text-paper"
+              }`}
+            >
+              {item.deadline.split(" ")[0]}
+            </span>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 border-t border-dashed border-ink-faint/30 pt-3">
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-[1.4rem] font-black sm:text-[1.7rem]">
+              {item.company}
+            </h3>
+            <p className="mt-1 text-[0.95rem] text-ink-soft">{item.role}</p>
+            <p className="tag mt-2 text-ink-faint">
+              {item.grad} grads — due {item.due}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 sm:flex-col sm:items-end">
             <span
-              className={`text-[0.68rem] font-semibold uppercase tracking-[0.2em] ${statusInk[item.status]}`}
+              className={`tag border-2 border-ink px-2 py-1 ${statusBlock[item.status]}`}
             >
               {item.status}
             </span>
-            <motion.span
-              className="hand ml-auto text-[1.1rem] text-ink-faint"
-              initial={false}
-              animate={{ opacity: open ? 1 : 0, x: open ? 0 : 8 }}
-              transition={{ duration: 0.32 }}
-            >
-              {item.status === "Submitted"
-                ? "waiting on them"
-                : "open the file →"}
-            </motion.span>
+            <span className="tag text-ink-faint transition-transform group-hover:translate-x-1">
+              Open →
+            </span>
           </div>
+
+          <Tape
+            className="-right-5 top-4"
+            color={item.tone}
+            angle={90}
+            width={64}
+            height={26}
+          />
         </Sheet>
       </motion.article>
     </Reveal>
@@ -97,43 +103,85 @@ function Slip({ item, index }: { item: Deadline; index: number }) {
 }
 
 export function DeadlinesStack() {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  // horizontal strip driven by vertical scroll
+  const stripX = useTransform(scrollYProgress, [0, 1], ["8%", "-38%"]);
+  const numScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.7, 1.15, 0.85]);
+
   return (
     <section
       aria-label="Upcoming internship deadlines"
-      className="relative px-4 pb-28 pt-6 sm:px-8"
+      className="relative overflow-hidden border-y-2 border-ink bg-paper-2 px-5 pb-28 pt-16 sm:px-8"
     >
-      <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:gap-14">
-        {/* pinned caption column */}
-        <div className="lg:sticky lg:top-28 lg:self-start">
-          <Reveal from="down" distance={24}>
-            <Label>Section 01 · Apply</Label>
-            <h2 className="mt-3 text-[clamp(2.1rem,5.5vw,3.2rem)] leading-[0.95]">
-              Deadlines
-              <br />
-              <span className="hand text-pink text-[0.62em] leading-none">
-                don&apos;t wait for you
-              </span>
-            </h2>
-            <p className="mt-5 max-w-[30ch] text-[0.97rem] leading-relaxed text-ink-soft">
-              Four slips clipped into the margin. Each one carries the date, who
-              they&apos;ll take, and how far you&apos;ve actually got.
-            </p>
-            <div className="mt-6 flex items-center gap-2">
-              <Link
-                to="/apply"
-                className="focus-ink ink-underline font-display text-[1.25rem] text-ink focus:outline-none"
-              >
-                Go to Apply
-              </Link>
-              <HandArrow className="h-6 w-12 text-pink/70" />
-            </div>
-          </Reveal>
-        </div>
+      {/* horizontal ticker strip that slides as you scroll vertically */}
+      <motion.div
+        aria-hidden
+        style={reduced ? {} : { x: stripX }}
+        className="pointer-events-none absolute left-0 top-6 flex w-[200%] gap-6 whitespace-nowrap"
+      >
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span
+            key={i}
+            className="tag border-2 border-ink px-3 py-1"
+            style={{
+              background:
+                i % 3 === 0 ? "var(--yellow)" : i % 3 === 1 ? "var(--paper)" : "var(--pink-wash)",
+            }}
+          >
+            Deadline
+          </span>
+        ))}
+      </motion.div>
 
-        <div className="space-y-5 sm:space-y-7">
-          {deadlines.map((item, i) => (
-            <Slip key={item.id} item={item} index={i} />
-          ))}
+      <div ref={ref} className="relative mx-auto mt-14 max-w-[1320px]">
+        <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr] lg:gap-12">
+          {/* pinned caption column */}
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <Reveal from="down" distance={30}>
+              <Tab color="pink">Section 02 — Apply</Tab>
+              <h2 className="mt-4 font-display text-[clamp(2.6rem,7vw,4.6rem)] font-black leading-[0.8]">
+                WHAT&apos;S
+                <br />
+                DUE?
+              </h2>
+              <motion.span
+                aria-hidden
+                style={reduced ? {} : { scale: numScale }}
+                className="mt-4 block w-max origin-left border-2 border-ink bg-ink px-4 py-1 font-display text-[2.4rem] font-black leading-none text-yellow"
+              >
+                {deadlines.length}
+              </motion.span>
+              <p className="mt-5 max-w-[30ch] text-[1rem] leading-relaxed text-ink-soft">
+                Four slips clipped into the margin. Date first, always — then who
+                they&apos;ll take and how far you&apos;ve actually got.
+              </p>
+              <div className="mt-6 flex items-center gap-2">
+                <Link
+                  to="/apply"
+                  className="focus-ink swipe-underline font-display text-[1rem] font-extrabold uppercase text-ink focus:outline-none"
+                >
+                  Go to Apply
+                </Link>
+                <Arrow className="h-7 w-16 text-blue" />
+              </div>
+            </Reveal>
+          </div>
+
+          <div className="space-y-6 sm:space-y-8">
+            {deadlines.map((item, i) => (
+              <Ticket key={item.id} item={item} index={i} />
+            ))}
+            <Reveal from="up" distance={40} delay={0.1}>
+              <p className="tag text-ink-faint">
+                Tracker holds the rest — cover letters, referrals, rejections.
+              </p>
+            </Reveal>
+          </div>
         </div>
       </div>
     </section>
