@@ -33,7 +33,7 @@ function Slip({ item, index }: { item: Deadline; index: number }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         tabIndex={0}
-        whileHover={reduced ? undefined : { x: 6, rotate: 0 }}
+        whileHover={reduced ? {} : { x: 6, rotate: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="focus-ink group relative outline-none"
         style={{ marginLeft: `clamp(0px, ${offset}px, 6vw)` }}
