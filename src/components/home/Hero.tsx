@@ -1,27 +1,40 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { Sheet, Tape, Clip, Label, Tab } from "@/components/paper/Paper";
 
 const WORDS = ["THE", "PRODUCT", "PLACE"];
 
+function getTodayParts(date = new Date()) {
+  return {
+    day: date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+    num: String(date.getDate()).padStart(2, "0"),
+    month: date.toLocaleDateString("en-US", { month: "long" }),
+  };
+}
+
 export function Hero() {
   const reduced = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
+  const [today, setToday] = useState(getTodayParts);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
   });
   const gridY = useTransform(scrollYProgress, [0, 1], [0, 160]);
   const cardY = useTransform(scrollYProgress, [0, 1], [0, -120]);
-  const stampRotate = useTransform(scrollYProgress, [0, 1], [-6, 10]);
+  const stampRotate = useTransform(scrollYProgress, [0, 1], [6, -10]);
+
+  useEffect(() => {
+    setToday(getTodayParts());
+  }, []);
 
   return (
     <section
       ref={ref}
       aria-label="The Product Place"
-      className="relative overflow-hidden border-b-2 border-ink pb-[6.5rem] pt-10 sm:pt-16"
+      className="relative overflow-hidden border-b-2 border-ink pb-16 pt-10 sm:pt-16"
     >
-      {/* layer 1 — background grid, moves slower */}
+      {/* layer 1 - background grid, moves slower */}
       <motion.div
         aria-hidden
         style={reduced ? {} : { y: gridY }}
@@ -30,7 +43,7 @@ export function Hero() {
         <div className="grid-bold h-full w-full opacity-70" />
       </motion.div>
 
-      {/* layer 2 — cropped colour blocks bleeding off the edges */}
+      {/* layer 2 - cropped colour blocks bleeding off the edges */}
       <motion.div
         aria-hidden
         initial={reduced ? false : { x: "-100%" }}
@@ -55,7 +68,7 @@ export function Hero() {
           className="flex flex-wrap items-center gap-3"
         >
           <Tab color="ink">Workspace</Tab>
-          <Label>Edition no. 128 — Fri 08 Oct</Label>
+          <Label>The first edition.</Label>
         </motion.div>
 
         {/* the title, snapping into place piece by piece */}
@@ -99,12 +112,13 @@ export function Hero() {
           />
         </h1>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+        <div className="relative mt-10 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <motion.div
             initial={reduced ? false : { y: 30, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.55 }}
+            className="min-w-0"
           >
             <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3.4vw,2.5rem)] font-extrabold uppercase leading-[0.95] tracking-[-0.03em]">
               Five things.{" "}
@@ -116,34 +130,34 @@ export function Hero() {
                 transition={{ duration: 0.5, delay: 1 }}
               >
                 Ten minutes.
-              </motion.span>{" "}
-              Every single day.
+              </motion.span>
+              <span className="mt-1 block text-green">Every single day.</span>
             </p>
             <p className="mt-5 max-w-[46ch] text-[1rem] leading-relaxed text-ink-soft">
-              Apply, network, learn, create, practice — one workspace for the
-              student who has decided they&apos;re going to be a PM.
+              Apply, network, learn, create, practice - one workspace for all
+              things product. Start learning, start creating.
             </p>
           </motion.div>
 
-          {/* date stamp — a real block of colour, cropped by the grid */}
+          {/* date stamp sits to the right of the subtitle + description */}
           <motion.div
             style={reduced ? {} : { y: cardY, rotate: stampRotate }}
             initial={reduced ? false : { y: -80, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.2, 0.9, 0.2, 1] }}
-            className="relative justify-self-start lg:justify-self-end"
+            className="relative w-[min(100%,11.5rem)] shrink-0 self-end md:-mt-5 md:ml-auto md:mr-3 md:self-start lg:mr-5"
           >
-            <Clip className="absolute -top-7 left-8 z-30" angle={-8} color="blue" />
-            <Sheet tone="yellow" shadow="hard" edge="corner-cut" className="group px-7 py-6">
-              <Tape className="-top-3 right-4" color="green" angle={9} width={90} variant="check" />
+            <Clip className="absolute -top-5 left-6 z-30 scale-90" angle={-8} color="blue" />
+            <Sheet tone="yellow" shadow="hard" edge="corner-cut" className="group px-5 py-4">
+              <Tape className="-top-2.5 right-3" color="green" angle={9} width={72} variant="check" />
               <Label className="text-ink/70">Today is</Label>
-              <p className="mt-1 font-display text-[clamp(3rem,9vw,5.4rem)] font-black leading-[0.78] tracking-[-0.05em]">
-                FRI
+              <p className="mt-1 font-display text-[clamp(2.2rem,6.5vw,3.6rem)] font-black leading-[0.78] tracking-[-0.05em]">
+                {today.day}
                 <br />
-                08
+                {today.num}
               </p>
-              <p className="tag mt-2 text-ink/70">October — week 41</p>
+              <p className="tag mt-1.5 text-ink/70">{today.month}</p>
             </Sheet>
           </motion.div>
         </div>
@@ -155,10 +169,10 @@ export function Hero() {
           {Array.from({ length: 2 }).map((_, dup) => (
             <span key={dup} className="flex gap-8">
               {["Apply", "Network", "Learn", "Create", "Practice"].flatMap((w) => [
-                <span key={w} className="tag text-paper">
+                <span key={`${dup}-${w}`} className="tag text-paper">
                   {w}
                 </span>,
-                <span key={`${w}-dot`} aria-hidden className="tag text-yellow">
+                <span key={`${dup}-${w}-dot`} aria-hidden className="tag text-yellow">
                   ✳
                 </span>,
               ])}
