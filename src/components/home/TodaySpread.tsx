@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { motion, useInView, useReducedMotion } from "motion/react";
-import { Sheet, Tape, Clip, Label, Arrow } from "@/components/paper/Paper";
+import { Sheet, Tape, Clip, Label } from "@/components/paper/Paper";
 import { useTasks } from "@/hooks/useTasks";
 
 function Check({ done, onClick }: { done: boolean; onClick: () => void }) {
@@ -82,7 +81,6 @@ export function TodaySpread() {
               <span className="border-2 border-ink bg-ink px-3 py-1 tag text-paper">
                 {open === 0 ? "All clear" : `${open} open`}
               </span>
-              <Arrow className="h-8 w-20 text-pink" delay={0.4} />
             </div>
 
             <p className="mt-6 max-w-[32ch] text-[1rem] leading-relaxed text-ink-soft">
@@ -90,20 +88,6 @@ export function TodaySpread() {
               device, so the list is waiting where you left it.
             </p>
 
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link
-                to="/practice"
-                className="focus-ink swipe-underline font-display text-[0.95rem] font-extrabold uppercase tracking-tight text-ink focus:outline-none"
-              >
-                Warm up a prompt
-              </Link>
-              <Link
-                to="/apply"
-                className="focus-ink swipe-underline font-display text-[0.95rem] font-extrabold uppercase tracking-tight text-blue focus:outline-none"
-              >
-                Open the tracker
-              </Link>
-            </div>
           </div>
 
           {/* the artifact: sheet slides in, rotates flat, tape stretches, lines reveal, clip lands */}
@@ -137,7 +121,7 @@ export function TodaySpread() {
 
               <div className="mt-8 flex items-end justify-between gap-4 border-b-4 border-ink pb-2">
                 <h3 className="font-display text-[1.5rem] font-black">
-                  The list
+                  To-do
                 </h3>
                 <Label>Saved on this device</Label>
               </div>

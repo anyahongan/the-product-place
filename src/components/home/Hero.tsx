@@ -146,9 +146,9 @@ export function Hero() {
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.2, 0.9, 0.2, 1] }}
-            className="relative w-[min(100%,11.5rem)] shrink-0 self-end md:-mt-5 md:ml-auto md:mr-3 md:self-start lg:mr-5"
+            className="relative w-[min(100%,11.5rem)] shrink-0 self-end md:-mt-16 md:ml-auto md:mr-3 md:self-start lg:-mt-20 lg:mr-5"
           >
-            <Clip className="absolute -top-5 left-6 z-30 scale-90" angle={-8} color="blue" />
+            <Clip className="absolute -top-9 left-6 z-30 scale-90" angle={-8} color="blue" />
             <Sheet tone="yellow" shadow="hard" edge="corner-cut" className="group px-5 py-4">
               <Tape className="-top-2.5 right-3" color="green" angle={9} width={72} variant="check" />
               <Label className="text-ink/70">Today is</Label>

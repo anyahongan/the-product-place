@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { to: "/apply", label: "Apply", color: "pink" },
-  { to: "/network", label: "Network", color: "blue" },
-  { to: "/learn", label: "Learn", color: "green" },
-  { to: "/create", label: "Create", color: "purple" },
-  { to: "/practice", label: "Practice", color: "yellow" },
+  { to: "/apply", label: "Apply", color: "blue", onColor: "paper" },
+  { to: "/network", label: "Network", color: "pink", onColor: "ink" },
+  { to: "/learn", label: "Learn", color: "green", onColor: "ink" },
+  { to: "/create", label: "Create", color: "purple", onColor: "paper" },
+  { to: "/practice", label: "Practice", color: "yellow", onColor: "ink" },
 ] as const;
 
 export function SiteHeader() {
@@ -42,7 +42,10 @@ export function SiteHeader() {
               to={item.to}
               className="focus-ink shrink-0 border-2 border-transparent px-2 py-1 font-display text-[0.78rem] font-extrabold uppercase tracking-[0.04em] text-ink transition-colors hover:border-ink focus:outline-none sm:text-[0.86rem]"
               activeProps={{
-                className: "border-ink",
+                className: cn(
+                  "border-ink",
+                  item.onColor === "paper" ? "text-paper" : "text-ink",
+                ),
                 style: { background: `var(--${item.color})` },
               }}
             >

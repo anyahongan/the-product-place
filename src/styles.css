@@ -84,13 +84,13 @@
   --blue: oklch(0.55 0.192 254);
   --green: oklch(0.73 0.18 152);
   --pink: oklch(0.68 0.215 356);
-  --yellow: oklch(0.885 0.163 96);
+  --yellow: oklch(0.9 0.11 95);
   --purple: oklch(0.52 0.212 295);
 
   --blue-wash: oklch(0.945 0.038 254);
   --green-wash: oklch(0.955 0.05 152);
   --pink-wash: oklch(0.95 0.04 356);
-  --yellow-wash: oklch(0.97 0.06 96);
+  --yellow-wash: oklch(0.97 0.045 95);
   --purple-wash: oklch(0.948 0.038 295);
 
   --background: var(--paper);

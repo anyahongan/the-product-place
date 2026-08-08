@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import { Sheet, Tape, Label, Arrow, Tab } from "@/components/paper/Paper";
+import { Sheet, Tape, Label, Tab } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { deadlines, type Deadline } from "@/data/content";
 
@@ -111,7 +111,7 @@ export function DeadlinesStack() {
   });
   // horizontal strip driven by vertical scroll
   const stripX = useTransform(scrollYProgress, [0, 1], ["8%", "-38%"]);
-  const numScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.7, 1.15, 0.85]);
+  const open = deadlines.length;
 
   return (
     <section
@@ -143,31 +143,26 @@ export function DeadlinesStack() {
           {/* pinned caption column */}
           <div className="lg:sticky lg:top-28 lg:self-start">
             <Reveal from="down" distance={30}>
-              <Tab color="pink">Section 02 — Apply</Tab>
+              <Tab color="blue">Section 02 — Apply</Tab>
               <h2 className="mt-4 font-display text-[clamp(2.6rem,7vw,4.6rem)] font-black leading-[0.8]">
                 WHAT&apos;S
                 <br />
                 DUE?
               </h2>
-              <motion.span
-                aria-hidden
-                style={reduced ? {} : { scale: numScale }}
-                className="mt-4 block w-max origin-left border-2 border-ink bg-ink px-4 py-1 font-display text-[2.4rem] font-black leading-none text-yellow"
-              >
-                {deadlines.length}
-              </motion.span>
+              <span className="mt-4 inline-block border-2 border-ink bg-ink px-3 py-1 tag text-paper">
+                {open === 0 ? "All clear" : `${open} open`}
+              </span>
               <p className="mt-5 max-w-[30ch] text-[1rem] leading-relaxed text-ink-soft">
-                Four slips clipped into the margin. Date first, always — then who
-                they&apos;ll take and how far you&apos;ve actually got.
+                Four new openings have been highlighted. Let&apos;s see who they
+                are and how long you&apos;ve got.
               </p>
               <div className="mt-6 flex items-center gap-2">
                 <Link
                   to="/apply"
-                  className="focus-ink swipe-underline font-display text-[1rem] font-extrabold uppercase text-ink focus:outline-none"
+                  className="focus-ink swipe-underline font-display text-[1rem] font-extrabold uppercase text-blue focus:outline-none"
                 >
                   Go to Apply
                 </Link>
-                <Arrow className="h-7 w-16 text-blue" />
               </div>
             </Reveal>
           </div>

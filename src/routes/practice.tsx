@@ -26,7 +26,7 @@ function PracticePage() {
     <PlaceholderPage
       kicker="Section 05 · Practice"
       title="Practice"
-      tone="purple"
+      tone="yellow"
       pattern="grid"
       blurb="Four rooms, four kinds of question. Say the answer out loud, write the structure down, and notice which one you keep avoiding."
       bullets={[

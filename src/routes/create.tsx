@@ -26,7 +26,7 @@ function CreatePage() {
     <PlaceholderPage
       kicker="Section 04 · Create"
       title="Create"
-      tone="yellow"
+      tone="purple"
       pattern="grid-fine"
       blurb="The fastest way to sound like a PM is to have built something. Take a prompt, work in the open, and leave with a case study instead of a screenshot."
       bullets={[
