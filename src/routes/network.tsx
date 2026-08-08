@@ -27,7 +27,7 @@ function NetworkPage() {
       kicker="Section 02 · Network"
       title="Network"
       tone="pink"
-      pattern="dots"
+      pattern="grid-fine"
       blurb="Outreach is a paper trail, not a CRM. Who you wrote to, what you said, what they said back, and the one thing you promised to follow up on."
       bullets={[
         "Contacts with company, role and how you met",

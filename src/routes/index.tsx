@@ -4,7 +4,6 @@ import { TodaySpread } from "@/components/home/TodaySpread";
 import { DeadlinesStack } from "@/components/home/DeadlinesStack";
 import { DailyFive } from "@/components/home/DailyFive";
 import { Glimpses } from "@/components/home/Glimpses";
-import { Label } from "@/components/paper/Paper";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,7 +43,6 @@ function Home() {
             The Product Place
           </p>
           <p className="tag text-yellow">Close the notebook. Come back tomorrow.</p>
-          <Label className="text-paper/50">Visual prototype — v0.2</Label>
         </div>
       </footer>
     </main>

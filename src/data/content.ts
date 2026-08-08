@@ -123,7 +123,7 @@ export const practicePaths = [
     title: "Product Sense",
     prompt: "Design a reading app for someone who has stopped finishing books.",
     count: "24 prompts",
-    tone: "blue" as const,
+    tone: "yellow" as const,
   },
   {
     id: "metrics",

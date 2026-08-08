@@ -101,15 +101,8 @@ export function TodaySpread() {
               tone="paper"
               shadow="hard"
               className="group relative px-5 pb-8 pt-9 sm:px-9"
+              style={{ background: "oklch(0.975 0.022 356)" }}
             >
-              <motion.span
-                aria-hidden
-                className="tape absolute -left-8 top-6 h-[30px] w-[58%] origin-left"
-                style={{ rotate: "-2deg", ["--tape-color" as string]: "var(--blue)" }}
-                initial={reduced ? false : { scaleX: 0 }}
-                animate={play ? { scaleX: 1 } : {}}
-                transition={{ duration: 0.45, delay: 0.35, ease: [0.2, 0.9, 0.2, 1] }}
-              />
               <motion.div
                 initial={reduced ? false : { y: -46, opacity: 0 }}
                 animate={play ? { y: 0, opacity: 1 } : {}}
@@ -120,7 +113,7 @@ export function TodaySpread() {
               </motion.div>
 
               <div className="mt-8 flex items-end justify-between gap-4 border-b-4 border-ink pb-2">
-                <h3 className="font-display text-[1.5rem] font-black">
+                <h3 className="font-display text-[1.5rem] font-black text-pink">
                   To-do
                 </h3>
                 <Label>Saved on this device</Label>
@@ -187,9 +180,9 @@ export function TodaySpread() {
             </Sheet>
 
             <Tape
-              className="-bottom-4 left-10"
+              className="-top-4 left-10"
               color="yellow"
-              angle={4}
+              angle={-4}
               width={140}
               variant="check"
             />

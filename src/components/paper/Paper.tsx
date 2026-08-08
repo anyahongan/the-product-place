@@ -156,8 +156,10 @@ export function Clip({
   className?: string;
   angle?: number;
   size?: number;
-  color?: "ink" | "blue" | "pink" | "purple";
+  color?: "ink" | "blue" | "pink" | "purple" | "green" | "yellow";
 }) {
+  const slotStroke =
+    color === "yellow" || color === "green" ? "var(--ink)" : "var(--paper)";
   return (
     <svg
       aria-hidden
@@ -173,7 +175,7 @@ export function Clip({
         stroke="var(--ink)"
         strokeWidth="2"
       />
-      <path d="M11 8v30M29 8v30" stroke="var(--paper)" strokeWidth="2.4" opacity="0.75" />
+      <path d="M11 8v30M29 8v30" stroke={slotStroke} strokeWidth="2.4" opacity="0.75" />
       <rect x="9" y="1" width="22" height="7" fill="var(--paper)" stroke="var(--ink)" strokeWidth="2" />
     </svg>
   );

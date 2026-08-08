@@ -57,7 +57,15 @@ export function Hero() {
         aria-hidden
         className="pointer-events-none absolute -right-24 top-16 -z-10 hidden h-[70vh] w-[30vw] border-2 border-ink bg-purple/10 sm:block"
         style={{ rotate: "6deg" }}
-      />
+      >
+        <Tape
+          className="-left-14 top-5"
+          color="green"
+          angle={-28}
+          width={210}
+          variant="check"
+        />
+      </div>
 
       <div className="relative mx-auto max-w-[1320px] px-5 sm:px-8">
         <motion.div
@@ -131,7 +139,7 @@ export function Hero() {
               >
                 Ten minutes.
               </motion.span>
-              <span className="mt-1 block text-green">Every single day.</span>
+              <span className="mt-1 block text-pink">Every single day.</span>
             </p>
             <p className="mt-5 max-w-[46ch] text-[1rem] leading-relaxed text-ink-soft">
               Apply, network, learn, create, practice - one workspace for all
@@ -149,8 +157,7 @@ export function Hero() {
             className="relative w-[min(100%,11.5rem)] shrink-0 self-end md:-mt-16 md:ml-auto md:mr-3 md:self-start lg:-mt-20 lg:mr-5"
           >
             <Clip className="absolute -top-9 left-6 z-30 scale-90" angle={-8} color="blue" />
-            <Sheet tone="yellow" shadow="hard" edge="corner-cut" className="group px-5 py-4">
-              <Tape className="-top-2.5 right-3" color="green" angle={9} width={72} variant="check" />
+            <Sheet tone="yellow" shadow="hard" className="group px-5 py-4">
               <Label className="text-ink/70">Today is</Label>
               <p className="mt-1 font-display text-[clamp(2.2rem,6.5vw,3.6rem)] font-black leading-[0.78] tracking-[-0.05em]">
                 {today.day}

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { Sheet, Tape, Label, Tab } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { Parallax } from "@/components/paper/Parallax";
@@ -115,10 +115,10 @@ function CreateGlimpse() {
         </h3>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_0.7fr] lg:items-start">
-          <div className="flex items-center gap-3 2xl:-mt-8">
+          <div className="flex items-center gap-3 lg:justify-center lg:self-start">
             <Link
               to="/create"
-              className="focus-ink tag border-2 border-ink bg-ink px-5 py-3 text-paper transition-transform hover:-translate-y-[3px] focus:outline-none"
+              className="focus-ink tag border-2 border-ink bg-ink px-5 py-3 text-paper transition-transform hover:-translate-y-[3px] focus:outline-none lg:w-[90%] lg:max-w-none lg:px-10 lg:py-4 lg:text-center"
             >
               Take the prompt
             </Link>
@@ -145,15 +145,58 @@ function CreateGlimpse() {
 function PracticeGlimpse() {
   const [active, setActive] = useState(practicePaths[0]!.id);
   const current = practicePaths.find((p) => p.id === active) ?? practicePaths[0]!;
+  const ref = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const stripX = useTransform(scrollYProgress, [0, 1], ["8%", "-38%"]);
 
   return (
-    <section className="relative overflow-hidden border-t-2 border-ink bg-yellow/15 px-5 pb-28 pt-24 sm:px-8">
-      <div className="mx-auto max-w-[1320px]">
+    <section className="relative overflow-hidden border-t-2 border-ink bg-yellow/15 px-5 pb-28 pt-16 sm:px-8">
+      {/* horizontal ticker strip that slides as you scroll vertically */}
+      <motion.div
+        aria-hidden
+        style={reduced ? {} : { x: stripX }}
+        className="pointer-events-none absolute left-0 top-6 flex w-[200%] gap-6 whitespace-nowrap"
+      >
+        {Array.from({ length: 12 }).map((_, i) => {
+          const tone =
+            i % 3 === 0 ? "yellow" : i % 3 === 1 ? "paper" : "lavender";
+          return (
+            <span
+              key={i}
+              className="tag border-2 border-ink px-3 py-1"
+              style={{
+                background:
+                  tone === "lavender"
+                    ? "oklch(0.88 0.06 295)"
+                    : `var(--${tone})`,
+                color: "var(--ink)",
+              }}
+            >
+              Practice
+            </span>
+          );
+        })}
+      </motion.div>
+
+      <div ref={ref} className="relative mx-auto mt-14 max-w-[1320px]">
         <Reveal from="down" distance={30}>
           <Tab color="yellow">Section 07 — Practice</Tab>
           <h3 className="mt-4 font-display text-[clamp(2.2rem,6vw,4rem)] font-black leading-[0.82]">
-            PRACTICE MODE.
+            <span style={{ color: "oklch(0.78 0.16 92)" }}>PREPARE</span>{" "}
+            <span className="text-ink">FOR</span>
+            <br />
+            <span className="text-ink">THE</span>{" "}
+            <span style={{ color: "oklch(0.78 0.16 92)" }}>INTERVIEW</span>
           </h3>
+          <p className="mt-5 text-[1rem] leading-relaxed text-ink-soft">
+            Walk through cases, behaviorals, and technicals.
+            <br />
+            Learn how to think product and practice execution.
+          </p>
         </Reveal>
 
         <div className="mt-10 grid gap-0 sm:grid-cols-2 lg:grid-cols-4">
@@ -165,11 +208,7 @@ function PracticeGlimpse() {
                   type="button"
                   onClick={() => setActive(p.id)}
                   aria-pressed={on}
-                  className="focus-ink block h-full w-full border-2 border-ink px-5 py-6 text-left transition-transform duration-200 hover:-translate-y-[5px] focus:outline-none"
-                  style={{
-                    background: on ? `var(--${p.tone})` : "var(--paper)",
-                    color: on && (p.tone === "blue" || p.tone === "purple") ? "var(--paper)" : "var(--ink)",
-                  }}
+                  className="focus-ink block h-full w-full border-2 border-ink bg-paper px-5 py-6 text-left text-ink transition-[transform,background-color] duration-200 hover:-translate-y-[5px] hover:bg-yellow focus:outline-none"
                 >
                   <span className="tag opacity-70">{p.count}</span>
                   <span className="mt-3 block font-display text-[1.3rem] font-black uppercase leading-[0.9]">
@@ -183,14 +222,15 @@ function PracticeGlimpse() {
 
         <motion.div key={current.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
           <Sheet tone="paper" shadow="hard" className="mt-8 px-6 py-8 sm:px-10">
-            <Tape className="-top-3 left-12" color={current.tone} angle={-4} width={130} />
+            <Tape className="-top-3 left-12" color="purple" angle={-4} width={130} />
             <Label>{current.title} — sample prompt</Label>
             <p className="mt-3 max-w-[42ch] font-display text-[clamp(1.3rem,3.4vw,2.1rem)] font-extrabold uppercase leading-[0.95]">
               {current.prompt}
             </p>
             <Link
               to="/practice"
-              className="focus-ink swipe-underline mt-6 inline-block font-display text-[1rem] font-extrabold uppercase text-ink focus:outline-none"
+              className="focus-ink swipe-underline mt-6 inline-block font-display text-[1rem] font-extrabold uppercase focus:outline-none"
+              style={{ color: "oklch(0.78 0.16 92)" }}
             >
               Answer it out loud
             </Link>

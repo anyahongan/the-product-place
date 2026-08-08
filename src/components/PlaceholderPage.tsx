@@ -1,14 +1,26 @@
 import { Link } from "@tanstack/react-router";
-import { Sheet, Tape, Clip, Label, Arrow, Tab } from "./paper/Paper";
+import { Sheet, Tape, Clip, Label, Tab } from "./paper/Paper";
 import { Reveal } from "./paper/Reveal";
 
 const areas = [
-  { to: "/apply", label: "Apply" },
-  { to: "/network", label: "Network" },
-  { to: "/learn", label: "Learn" },
-  { to: "/create", label: "Create" },
-  { to: "/practice", label: "Practice" },
+  { to: "/apply", label: "Apply", color: "blue", hover: "hover:text-blue" },
+  { to: "/network", label: "Network", color: "pink", hover: "hover:text-pink" },
+  { to: "/learn", label: "Learn", color: "green", hover: "hover:text-green" },
+  { to: "/create", label: "Create", color: "purple", hover: "hover:text-purple" },
+  { to: "/practice", label: "Practice", color: "yellow", hover: "hover:text-yellow" },
 ] as const;
+
+/** Lighter than the main soft wash — almost white with a hint of the page tone */
+const elsewhereWash: Record<
+  "blue" | "green" | "pink" | "yellow" | "purple",
+  string
+> = {
+  blue: "oklch(0.985 0.018 254)",
+  green: "oklch(0.985 0.02 152)",
+  pink: "oklch(0.985 0.018 356)",
+  yellow: "oklch(0.99 0.025 95)",
+  purple: "oklch(0.985 0.018 295)",
+};
 
 export function PlaceholderPage({
   title,
@@ -58,8 +70,14 @@ export function PlaceholderPage({
           </Reveal>
 
           <Reveal from="right" distance={80} rotate={2} delay={0.08}>
-            <Sheet tone="paper" shadow="hard-sm" tilt={1} className="relative px-6 py-8">
-              <Clip className="absolute -top-6 right-8 z-30" angle={10} color="ink" />
+            <Sheet
+              tone="paper"
+              shadow="hard-sm"
+              tilt={1}
+              className="relative px-6 py-8"
+              style={{ background: elsewhereWash[tone] }}
+            >
+              <Clip className="absolute -top-6 right-8 z-30" angle={10} color={tone} />
               <Label>Elsewhere in the workspace</Label>
               <ul className="mt-5 space-y-2">
                 {areas
@@ -68,7 +86,7 @@ export function PlaceholderPage({
                     <li key={a.to}>
                       <Link
                         to={a.to}
-                        className="focus-ink swipe-underline inline-block font-display text-[1.3rem] font-black uppercase text-ink focus:outline-none"
+                        className={`focus-ink swipe-underline inline-block font-display text-[1.3rem] font-black uppercase text-ink transition-colors focus:outline-none ${a.hover}`}
                       >
                         {a.label}
                       </Link>
@@ -76,7 +94,6 @@ export function PlaceholderPage({
                   ))}
               </ul>
               <div className="mt-6 flex items-center gap-2">
-                <Arrow flip className="h-7 w-16 text-pink" />
                 <Link
                   to="/"
                   className="focus-ink tag border-2 border-ink bg-yellow px-3 py-2 text-ink focus:outline-none"

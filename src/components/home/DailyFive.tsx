@@ -13,7 +13,7 @@ export function DailyFive() {
     offset: ["start start", "end end"],
   });
 
-  const bigScale = useTransform(scrollYProgress, [0, 0.35, 1], [1.25, 1, 0.72]);
+  const bigScale = useTransform(scrollYProgress, [0, 0.35, 1], [1.1, 1, 0.78]);
   const bigX = useTransform(scrollYProgress, [0, 1], ["0%", "-6%"]);
   const gridY = useTransform(scrollYProgress, [0, 1], [-80, 80]);
 
@@ -35,25 +35,42 @@ export function DailyFive() {
           <Tab color="green">Section 03 — Learn</Tab>
         </div>
 
-        <div className="mt-10 grid gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14">
+        <div className="mt-10 grid gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-14">
           {/* the pinned typographic showpiece */}
-          <div className="lg:sticky lg:top-24 lg:h-[68vh] lg:self-start">
+          <div className="lg:sticky lg:top-24 lg:self-start">
             <motion.div
               style={reduced ? {} : { scale: bigScale, x: bigX }}
               className="origin-top-left"
             >
-              <span className="block font-display text-[clamp(6rem,20vw,15rem)] font-black leading-[0.72] tracking-[-0.06em] text-ink">
-                5
-              </span>
-              <span className="block font-display text-[clamp(3rem,9vw,6.4rem)] font-black leading-[0.78] tracking-[-0.05em] text-ink">
-                MIN
-              </span>
-              <span className="block font-display text-[clamp(3rem,9vw,6.4rem)] font-black leading-[0.78] tracking-[-0.05em] text-green">
-                READ
-              </span>
+              {/* compact: one/two lines on narrower screens */}
+              <p className="font-display font-black uppercase leading-[0.82] tracking-[-0.05em] xl:hidden">
+                <span className="text-[clamp(3.2rem,12vw,6.5rem)] text-ink">
+                  5{" "}
+                </span>
+                <span className="text-[clamp(2.4rem,9vw,4.8rem)] text-ink">
+                  MIN{" "}
+                </span>
+                <span className="block text-[clamp(2.4rem,9vw,4.8rem)] text-green sm:inline">
+                  READ
+                </span>
+              </p>
+
+              {/* wide: stacked showpiece */}
+              <div className="hidden xl:block">
+                <span className="block font-display text-[clamp(6rem,20vw,15rem)] font-black leading-[0.72] tracking-[-0.06em] text-ink">
+                  5
+                </span>
+                <span className="block font-display text-[clamp(3rem,9vw,6.4rem)] font-black leading-[0.78] tracking-[-0.05em] text-ink">
+                  MIN
+                </span>
+                <span className="block font-display text-[clamp(3rem,9vw,6.4rem)] font-black leading-[0.78] tracking-[-0.05em] text-green">
+                  READ
+                </span>
+              </div>
             </motion.div>
-            <p className="tag relative z-10 mt-20 max-w-[28ch] text-ink-soft lg:mt-28">
+            <p className="tag relative z-10 mt-6 text-ink-soft lg:mt-12 lg:max-w-[40ch] xl:mt-16 xl:max-w-[28ch]">
               Daily five-minute rundown and one idea, concept, or framework.
+              <br />
               Explained simply and emphasizes why you should care.
             </p>
           </div>
@@ -84,17 +101,25 @@ export function DailyFive() {
               </Sheet>
             </Reveal>
 
+            {/* wider views: stretch across both columns to fill space under 5 MIN READ */}
+            <div className="space-y-8 lg:relative lg:z-10 lg:w-[calc(169.5%+3.5rem)] lg:-ml-[calc(69.5%+3.5rem)]">
             <Reveal from="left" distance={70} delay={0.05}>
-              <div className="border-l-[6px] border-blue pl-5">
+              <div className="border-l-[6px] border-blue py-2 pl-5">
                 <Label className="text-blue">Why it matters for PM</Label>
-                <p className="mt-2 max-w-[52ch] text-[1.02rem] leading-[1.65] text-ink">
+                <p className="mt-2 text-[1.02rem] leading-[1.65] text-ink lg:max-w-none">
                   {dailyFive.whyItMatters}
                 </p>
               </div>
             </Reveal>
 
             <Reveal from="up" distance={50} delay={0.05}>
-              <Sheet tone="yellow" shadow="hard-sm" tilt={-0.8} className="px-6 py-7 sm:px-8">
+              <Sheet
+                tone="paper"
+                shadow="hard-sm"
+                tilt={-0.8}
+                className="px-6 py-7 sm:px-8 lg:max-w-none"
+                style={{ background: "oklch(0.95 0.08 98)" }}
+              >
                 <h3 className="font-display text-[1.5rem] font-black text-ink">
                   Take away exactly two things
                 </h3>
@@ -130,13 +155,15 @@ export function DailyFive() {
             </Reveal>
 
             <Reveal from="up" distance={30} delay={0.2}>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t-2 border-ink/20 pt-6">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                 <a
                   href="#"
                   onClick={(e) => e.preventDefault()}
-                  className="focus-ink swipe-underline font-display text-[1.15rem] font-extrabold uppercase text-blue focus:outline-none"
+                  className="focus-ink inline-block -rotate-2 font-display text-[1.15rem] font-extrabold uppercase text-green transition-transform duration-200 hover:-translate-y-1 hover:rotate-1 hover:scale-105 focus:outline-none"
                 >
-                  Read the full five minutes
+                  <span className="inline-block border-2 border-ink bg-green px-3 py-1.5 text-ink shadow-hard-sm">
+                    Read the full five minutes
+                  </span>
                 </a>
                 <span className="tag text-ink-faint">{dailyFive.source}</span>
               </div>
@@ -197,6 +224,7 @@ export function DailyFive() {
                 </Link>
               </Sheet>
             </Reveal>
+            </div>
           </div>
         </div>
       </div>

@@ -152,9 +152,13 @@ export function DeadlinesStack() {
               <span className="mt-4 inline-block border-2 border-ink bg-ink px-3 py-1 tag text-paper">
                 {open === 0 ? "All clear" : `${open} open`}
               </span>
-              <p className="mt-5 max-w-[30ch] text-[1rem] leading-relaxed text-ink-soft">
-                Four new openings have been highlighted. Let&apos;s see who they
-                are and how long you&apos;ve got.
+              <p className="mt-5 text-[1rem] leading-relaxed text-ink-soft">
+                <span className="block whitespace-nowrap">
+                  Four new openings have been highlighted.
+                </span>
+                <span className="block whitespace-nowrap">
+                  Let&apos;s see who they are and how long you&apos;ve got.
+                </span>
               </p>
               <div className="mt-6 flex items-center gap-2">
                 <Link
@@ -172,7 +176,7 @@ export function DeadlinesStack() {
               <Ticket key={item.id} item={item} index={i} />
             ))}
             <Reveal from="up" distance={40} delay={0.1}>
-              <p className="tag text-ink-faint">
+              <p className="tag text-blue lg:text-center">
                 Tracker holds the rest — cover letters, referrals, rejections.
               </p>
             </Reveal>
