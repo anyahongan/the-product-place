@@ -1,0 +1,183 @@
+import { useEffect } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Clip, Sheet, Tape } from "@/components/paper/Paper";
+import { formatShortDate } from "@/data/apply";
+import { modeCta } from "@/components/apply/modeCta";
+import type { ApplicationMode, JobListing } from "@/types/apply";
+
+export function JobDetail({
+  job,
+  mode,
+  onClose,
+  onApply,
+}: {
+  job: JobListing | null;
+  mode: ApplicationMode;
+  onClose: () => void;
+  onApply: () => void;
+}) {
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (!job) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [job, onClose]);
+
+  return (
+    <AnimatePresence>
+      {job && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-stretch justify-end bg-ink/45"
+          initial={reduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reduced ? { opacity: 1 } : { opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal
+            aria-labelledby="job-detail-title"
+            initial={reduced ? false : { x: "100%" }}
+            animate={{ x: 0 }}
+            exit={reduced ? { x: 0 } : { x: "100%" }}
+            transition={{ duration: 0.28, ease: [0.2, 0.9, 0.2, 1] }}
+            className="relative h-full w-full max-w-xl overflow-y-auto border-l-2 border-ink bg-paper shadow-hard"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Sheet
+              tone={job.tone}
+              soft
+              pattern="grid-fine"
+              bordered={false}
+              shadow="none"
+              className="min-h-full px-6 pb-16 pt-8 sm:px-8"
+            >
+              <Clip className="absolute -top-1 right-10 z-20" angle={8} color={job.tone} />
+              <Tape className="-top-3 left-8" color="yellow" angle={-4} width={110} height={26} />
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="focus-ink tag mb-6 border-2 border-ink bg-paper px-2 py-1 outline-none hover:bg-ink hover:text-paper"
+              >
+                Close ×
+              </button>
+
+              <p className="tag text-ink-soft">{job.source}</p>
+              <h2
+                id="job-detail-title"
+                className="mt-2 font-display text-[clamp(1.8rem,5vw,2.6rem)] font-black uppercase leading-[0.85]"
+              >
+                {job.company}
+              </h2>
+              <p className="mt-3 text-[1.05rem] text-ink-soft">{job.title}</p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="tag border-2 border-ink bg-blue px-2 py-1 text-paper">
+                  {job.productRole}
+                </span>
+                <span className="tag border-2 border-ink bg-paper px-2 py-1">
+                  {job.location} · {job.workMode}
+                </span>
+                <span className="tag border-2 border-ink bg-paper px-2 py-1">
+                  {job.employmentType}
+                </span>
+                <span className="tag border-2 border-ink bg-paper px-2 py-1">
+                  Match {job.matchPercent}%
+                </span>
+              </div>
+
+              <dl className="mt-6 grid gap-2 border-y-2 border-ink py-4 text-[0.95rem]">
+                <div className="flex justify-between gap-4">
+                  <dt className="tag text-ink-faint">Posted</dt>
+                  <dd>{formatShortDate(job.postedDate)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="tag text-ink-faint">Deadline</dt>
+                  <dd>{job.deadline ? formatShortDate(job.deadline) : "Rolling"}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="tag text-ink-faint">Eligibility</dt>
+                  <dd>’{job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}</dd>
+                </div>
+              </dl>
+
+              <section className="mt-6">
+                <h3 className="font-display text-[1.15rem] font-black uppercase">Description</h3>
+                <p className="mt-2 text-[0.98rem] leading-relaxed text-ink-soft">
+                  {job.description}
+                </p>
+              </section>
+
+              <section className="mt-6">
+                <h3 className="font-display text-[1.15rem] font-black uppercase">
+                  Responsibilities
+                </h3>
+                <ul className="mt-2 space-y-2">
+                  {job.responsibilities.map((item) => (
+                    <li key={item} className="flex gap-3 text-[0.95rem] text-ink-soft">
+                      <span aria-hidden className="mt-[0.4rem] h-2.5 w-2.5 shrink-0 bg-blue" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="mt-6">
+                <h3 className="font-display text-[1.15rem] font-black uppercase">Requirements</h3>
+                <ul className="mt-2 space-y-2">
+                  {job.requirements.map((item) => (
+                    <li key={item} className="flex gap-3 text-[0.95rem] text-ink-soft">
+                      <span aria-hidden className="mt-[0.4rem] h-2.5 w-2.5 shrink-0 bg-ink" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <div className="mt-8 grid gap-2">
+                <button
+                  type="button"
+                  onClick={onApply}
+                  className="focus-ink border-2 border-ink bg-yellow px-4 py-3 font-display text-base font-black uppercase outline-none"
+                >
+                  {modeCta(mode)}
+                </button>
+                <p className="tag text-ink-faint">
+                  Demo only — does not submit a real application.
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-2 border-2 border-dashed border-ink/40 bg-paper/70 p-4">
+                <p className="tag text-ink-faint">Coming later — not implemented</p>
+                <button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed border-2 border-ink/30 bg-paper-2 px-3 py-2 text-left font-display text-sm font-black uppercase text-ink-faint"
+                >
+                  Tailor resume
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed border-2 border-ink/30 bg-paper-2 px-3 py-2 text-left font-display text-sm font-black uppercase text-ink-faint"
+                >
+                  Create cover letter
+                </button>
+              </div>
+            </Sheet>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
