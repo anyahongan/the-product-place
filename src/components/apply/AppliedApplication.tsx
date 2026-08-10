@@ -4,7 +4,7 @@ import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
 import { NetworkingSuggestions } from "@/components/apply/NetworkingSuggestions";
 import { formatShortDate } from "@/data/apply";
 import { cn } from "@/lib/utils";
-import type { AppliedApplication as App, AppliedStatus } from "@/types/apply";
+import type { AppliedApplication as App, AppliedStatus, ToneName } from "@/types/apply";
 
 const statusStyle: Record<AppliedStatus, string> = {
   waiting: "bg-yellow text-ink",
@@ -14,6 +14,11 @@ const statusStyle: Record<AppliedStatus, string> = {
 };
 
 const statuses: AppliedStatus[] = ["waiting", "interviewing", "rejected", "withdrawn"];
+
+/** Keep pink reserved for the "Haven't heard back?" callout */
+function cardTone(tone: ToneName): Exclude<ToneName, "pink"> {
+  return tone === "pink" ? "blue" : tone;
+}
 
 export function AppliedApplicationCard({
   app,
@@ -27,6 +32,7 @@ export function AppliedApplicationCard({
   onStatusChange: (status: AppliedStatus) => void;
 }) {
   const reduced = useReducedMotion();
+  const tone = cardTone(app.tone);
 
   return (
     <motion.article
@@ -35,13 +41,13 @@ export function AppliedApplicationCard({
       transition={{ duration: 0.2, ease: [0.2, 0.9, 0.2, 1] }}
     >
       <Sheet
-        tone={app.tone}
+        tone={tone}
         soft
         shadow="hard-sm"
         edge="corner-cut"
         className="relative px-5 py-5 sm:px-7"
       >
-        <Tape className="-left-3 top-6" color={app.tone} angle={-88} width={52} height={22} />
+        <Tape className="-left-3 top-6" color={tone} angle={-88} width={52} height={22} />
 
         <button
           type="button"

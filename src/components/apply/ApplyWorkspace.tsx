@@ -24,8 +24,8 @@ export function ApplyWorkspace() {
           <h1 className="mt-2 font-display text-[clamp(2.6rem,9vw,5.5rem)] font-black uppercase leading-[0.8]">
             Apply
           </h1>
-          <p className="mt-4 max-w-[40ch] text-[1.02rem] text-ink-soft">
-            Three workflows on one sheet — discover, track, prepare.
+          <p className="mt-4 text-[1.02rem] text-ink-soft md:whitespace-nowrap">
+            Three workflows on one sheet: discover, track, prepare.
           </p>
           <div className="mt-7">
             <LifecycleTabs value={tab} onChange={setTab} />

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
-import { formatShortDate } from "@/data/apply";
+import { EMPLOYMENT_TYPE_LABELS, formatShortDate, WORK_MODE_LABELS } from "@/data/apply";
 import { modeCta } from "@/components/apply/modeCta";
 import type { ApplicationMode, JobListing } from "@/types/apply";
 
@@ -56,7 +56,6 @@ export function JobDetail({
             <Sheet
               tone={job.tone}
               soft
-              pattern="grid-fine"
               bordered={false}
               shadow="none"
               className="min-h-full px-6 pb-16 pt-8 sm:px-8"
@@ -86,10 +85,10 @@ export function JobDetail({
                   {job.productRole}
                 </span>
                 <span className="tag border-2 border-ink bg-paper px-2 py-1">
-                  {job.location} · {job.workMode}
+                  {job.location} · {WORK_MODE_LABELS[job.workMode]}
                 </span>
                 <span className="tag border-2 border-ink bg-paper px-2 py-1">
-                  {job.employmentType}
+                  {EMPLOYMENT_TYPE_LABELS[job.employmentType]}
                 </span>
                 <span className="tag border-2 border-ink bg-paper px-2 py-1">
                   Match {job.matchPercent}%
@@ -153,12 +152,12 @@ export function JobDetail({
                   {modeCta(mode)}
                 </button>
                 <p className="tag text-ink-faint">
-                  Demo only — does not submit a real application.
+                  Demo only, does not submit a real application.
                 </p>
               </div>
 
               <div className="mt-6 grid gap-2 border-2 border-dashed border-ink/40 bg-paper/70 p-4">
-                <p className="tag text-ink-faint">Coming later — not implemented</p>
+                <p className="tag text-ink-faint">Coming later, not implemented</p>
                 <button
                   type="button"
                   disabled

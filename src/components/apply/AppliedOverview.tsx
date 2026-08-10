@@ -51,7 +51,7 @@ export function AppliedOverview() {
             <br />
             applications
           </h2>
-          <p className="mt-4 max-w-[46ch] text-[1.02rem] text-ink-soft">
+          <p className="mt-4 text-[1.02rem] text-ink-soft md:whitespace-nowrap">
             Manage submitted roles, see where things stand, and find people worth a nudge.
           </p>
         </div>
@@ -67,9 +67,9 @@ export function AppliedOverview() {
         >
           <Tape className="-top-3 left-10" color="blue" angle={-5} width={120} height={26} />
           <Stat label="Applications" value={stats.total} />
-          <Stat label="Waiting" value={stats.waiting} accent="yellow" />
-          <Stat label="Interviewing" value={stats.interviewing} accent="purple" />
-          <Stat label="Rejected" value={stats.rejected} accent="ink" />
+          <Stat label="Waiting" value={stats.waiting} />
+          <Stat label="Interviewing" value={stats.interviewing} />
+          <Stat label="Rejected" value={stats.rejected} />
         </Sheet>
       </Reveal>
 
@@ -97,45 +97,11 @@ export function AppliedOverview() {
   );
 }
 
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: number;
-  accent?: "yellow" | "purple" | "ink";
-}) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="border-2 border-ink bg-paper px-3 py-3">
       <p className="tag text-ink-faint">{label}</p>
-      <p
-        className="mt-1 font-display text-[2.4rem] font-black leading-none tracking-[-0.04em]"
-        style={
-          accent === "yellow"
-            ? {
-                color: "var(--ink)",
-                background: "var(--yellow)",
-                display: "inline-block",
-                padding: "0 0.25rem",
-              }
-            : accent === "purple"
-              ? {
-                  color: "var(--paper)",
-                  background: "var(--purple)",
-                  display: "inline-block",
-                  padding: "0 0.25rem",
-                }
-              : accent === "ink"
-                ? {
-                    color: "var(--paper)",
-                    background: "var(--ink)",
-                    display: "inline-block",
-                    padding: "0 0.25rem",
-                  }
-                : undefined
-        }
-      >
+      <p className="mt-1 font-display text-[2.4rem] font-black leading-none tracking-[-0.04em]">
         {value}
       </p>
     </div>

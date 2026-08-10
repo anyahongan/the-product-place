@@ -77,7 +77,7 @@ export function ApplicationMode({
         })}
       </div>
 
-      <p className="px-4 py-3 text-[0.92rem] leading-snug text-ink-soft" id="mode-help">
+      <p className="px-4 py-3 text-[0.92rem] leading-snug text-ink-soft md:whitespace-nowrap" id="mode-help">
         <span className="tag text-ink">{active.label}: </span>
         {active.blurb}
       </p>

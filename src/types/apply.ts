@@ -1,6 +1,7 @@
 export type ProductRole =
   | "Product Management"
   | "Product Design"
+  | "Product Analysis"
   | "Product Operations"
   | "Product Marketing"
   | "Product Strategy"
@@ -8,11 +9,16 @@ export type ProductRole =
   | "Growth Product"
   | "Other / Unspecified Product";
 
-export type WorkMode = "remote" | "hybrid" | "in person";
+export type WorkMode = "remote" | "hybrid" | "in-person";
 
 export type EmploymentType = "internship" | "part-time" | "full-time";
 
-export type JobSort = "newest" | "oldest" | "deadline";
+export type JobSort =
+  | "due-date"
+  | "opening-date"
+  | "best-match"
+  | "oldest-opening"
+  | "company";
 
 export type ApplicationMode = "manual" | "quick" | "auto";
 
@@ -99,8 +105,10 @@ export type InterviewItem = {
 
 export type JobFiltersState = {
   query: string;
+  savedOnly: boolean;
   productRoles: ProductRole[];
-  graduationYear: number | null;
+  graduationYears: number[];
+  locations: string[];
   locationQuery: string;
   workModes: WorkMode[];
   employmentTypes: EmploymentType[];

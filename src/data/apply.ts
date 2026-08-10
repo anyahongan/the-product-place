@@ -1,8 +1,16 @@
-import type { AppliedApplication, InterviewItem, JobListing, ProductRole } from "@/types/apply";
+import type {
+  AppliedApplication,
+  EmploymentType,
+  InterviewItem,
+  JobListing,
+  ProductRole,
+  WorkMode,
+} from "@/types/apply";
 
 export const PRODUCT_ROLES: ProductRole[] = [
   "Product Management",
   "Product Design",
+  "Product Analysis",
   "Product Operations",
   "Product Marketing",
   "Product Strategy",
@@ -11,7 +19,36 @@ export const PRODUCT_ROLES: ProductRole[] = [
   "Other / Unspecified Product",
 ];
 
+/** Primary specializations surfaced in the filters panel */
+export const SPECIALIZATION_FILTERS: ProductRole[] = [
+  "Product Management",
+  "Product Design",
+  "Product Analysis",
+];
+
 export const GRADUATION_YEARS = [2025, 2026, 2027, 2028, 2029];
+
+export const COMMON_LOCATIONS = [
+  "San Francisco, CA",
+  "New York, NY",
+  "Seattle, WA",
+  "Los Angeles, CA",
+  "Austin, TX",
+  "Chicago, IL",
+  "Remote (US)",
+];
+
+export const WORK_MODE_LABELS: Record<WorkMode, string> = {
+  remote: "Remote",
+  hybrid: "Hybrid",
+  "in-person": "In-person",
+};
+
+export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  internship: "Internship",
+  "part-time": "Part-time",
+  "full-time": "Full-time",
+};
 
 export const sampleJobs: JobListing[] = [
   {
@@ -51,7 +88,7 @@ export const sampleJobs: JobListing[] = [
     title: "Product Intern, Growth",
     productRole: "Growth Product",
     location: "New York, NY",
-    workMode: "in person",
+    workMode: "in-person",
     graduationYears: [2027],
     employmentType: "internship",
     postedDate: "2026-10-01",
@@ -172,7 +209,7 @@ export const sampleJobs: JobListing[] = [
     title: "Product Ops Intern",
     productRole: "Product Operations",
     location: "Austin, TX",
-    workMode: "in person",
+    workMode: "in-person",
     graduationYears: [2026, 2027, 2028],
     employmentType: "internship",
     postedDate: "2026-10-05",
@@ -314,7 +351,7 @@ export const sampleApplications: AppliedApplication[] = [
     coverLetter: "CL — Marrow growth",
     history: [{ date: "2026-10-02", note: "Submitted via Handshake" }],
     contacts: [{ id: "c5", label: "University Recruiter", detail: "Marrow campus liaison" }],
-    tone: "pink",
+    tone: "yellow",
   },
   {
     id: "app-4",
@@ -349,7 +386,7 @@ export const sampleApplications: AppliedApplication[] = [
     contacts: [
       { id: "c7", label: "Stanford alum — Product Manager", detail: "Adjacent hardware org" },
     ],
-    tone: "pink",
+    tone: "purple",
   },
   {
     id: "app-6",
@@ -443,7 +480,7 @@ export const sampleApplications: AppliedApplication[] = [
       { id: "c13", label: "Stanford alum — Product Manager", detail: "Kiln growth" },
       { id: "c14", label: "University Recruiter", detail: "Kiln campus" },
     ],
-    tone: "pink",
+    tone: "green",
   },
   {
     id: "app-11",
@@ -686,7 +723,7 @@ export const sampleInterviews: InterviewItem[] = [
     stage: "Product sense",
     datetime: "2026-10-12T15:00:00",
     progressStage: "Interview",
-    tone: "purple",
+    tone: "blue",
     modules: foldwellModules,
   },
   {

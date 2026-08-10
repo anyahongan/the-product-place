@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { Sheet, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
-import { formatShortDate } from "@/data/apply";
+import { formatShortDate, EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from "@/data/apply";
 import { modeCta } from "@/components/apply/modeCta";
 import { cn } from "@/lib/utils";
 import type { ApplicationMode, JobListing as Job } from "@/types/apply";
@@ -79,7 +79,8 @@ export function JobListing({
             </div>
 
             <p className="tag mt-3 text-ink-faint">
-              {job.location} · {job.workMode} · {job.employmentType}
+              {job.location} · {WORK_MODE_LABELS[job.workMode]} ·{" "}
+              {EMPLOYMENT_TYPE_LABELS[job.employmentType]}
             </p>
             <p className="tag mt-1 text-ink-faint">
               Posted {formatShortDate(job.postedDate)}
@@ -101,7 +102,7 @@ export function JobListing({
                 aria-pressed={saved}
                 className={cn(
                   "focus-ink border-2 border-ink px-3 py-2 font-display text-sm font-black uppercase outline-none",
-                  saved ? "bg-pink text-paper" : "bg-paper hover:bg-pink-wash",
+                  saved ? "bg-yellow text-ink" : "bg-paper hover:bg-yellow-wash",
                 )}
               >
                 {saved ? "Saved" : "Save"}
