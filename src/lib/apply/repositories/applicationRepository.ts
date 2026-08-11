@@ -1,34 +1,17 @@
 import type { ApplicationLifecycleStatus, ApplicationRecord, StatusEvent } from "@/lib/apply/types";
 import type { JobListingView } from "@/lib/apply/types";
 import type { ToneName } from "@/types/apply";
+import { companyIdFromName } from "@/types/recruiting";
+import { migrateApplications } from "@/lib/recruiting/demoApplications";
+import { readJson, writeJson } from "@/lib/recruiting/storage";
 import { PLACEHOLDER_CONTACTS } from "@/lib/apply/placeholderContacts";
 
 const STORAGE_KEY = "tpp.apply.applications.v1";
 const SAVED_KEY = "tpp.apply.saved.v1";
 const QUEUE_KEY = "tpp.apply.autoQueue.v1";
 
-function readJson<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson(key: string, value: unknown) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* quota / private mode */
-  }
-}
-
 export function listApplications(): ApplicationRecord[] {
-  return readJson<ApplicationRecord[]>(STORAGE_KEY, []);
+  return migrateApplications(readJson<ApplicationRecord[]>(STORAGE_KEY, []));
 }
 
 export function saveApplications(apps: ApplicationRecord[]) {
@@ -54,12 +37,14 @@ export function saveAutoQueueIds(ids: string[]) {
 export function createAppliedRecord(
   job: JobListingView,
   status: ApplicationLifecycleStatus = "Applied",
+  companyId?: string,
 ): ApplicationRecord {
   const now = new Date().toISOString();
   const event: StatusEvent = { status, timestamp: now };
   return {
     applicationId: `app-${job.id}-${Date.now()}`,
     jobId: job.id,
+    companyId: companyId ?? companyIdFromName(job.company),
     company: job.company,
     title: job.title,
     dateApplied: status === "Applied" || status === "Waiting" ? now.slice(0, 10) : null,

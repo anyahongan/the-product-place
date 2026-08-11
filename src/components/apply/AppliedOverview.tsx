@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sheet, Tab, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import {
@@ -8,10 +8,18 @@ import {
 import { useApplyContext } from "@/components/apply/useApplyContext";
 import type { ApplicationLifecycleStatus } from "@/lib/apply/types";
 
-export function AppliedOverview() {
+export function AppliedOverview({
+  focusApplicationId,
+}: {
+  focusApplicationId?: string;
+}) {
   const { apps, stats, setStatus, hydrated } = useApplyContext();
   const [filter, setFilter] = useState<"all" | ApplicationLifecycleStatus>("all");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(focusApplicationId ?? null);
+
+  useEffect(() => {
+    if (focusApplicationId) setOpenId(focusApplicationId);
+  }, [focusApplicationId]);
 
   const counts = useMemo(() => {
     const base: Record<"all" | ApplicationLifecycleStatus, number> = {
@@ -55,7 +63,7 @@ export function AppliedOverview() {
           soft
           pattern="grid"
           shadow="hard"
-          className="relative grid gap-4 px-5 py-6 sm:grid-cols-5 sm:px-8"
+          className="relative grid grid-cols-2 gap-3 px-4 py-5 sm:grid-cols-3 sm:gap-4 sm:px-6 lg:grid-cols-5 lg:px-8 lg:py-6"
         >
           <Tape className="-top-3 left-10" color="blue" angle={-5} width={120} height={26} />
           <Stat label="Applications" value={stats.total} />
@@ -102,9 +110,11 @@ export function AppliedOverview() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border-2 border-ink bg-paper px-3 py-3">
-      <p className="tag text-ink-faint">{label}</p>
-      <p className="mt-1 font-display text-[2.4rem] font-black leading-none tracking-[-0.04em]">
+    <div className="min-w-0 overflow-hidden border-2 border-ink bg-paper px-2.5 py-3 sm:px-3">
+      <p className="tag break-words hyphens-auto text-ink-faint leading-snug tracking-[0.12em] sm:tracking-[0.16em] lg:tracking-[0.2em]">
+        {label}
+      </p>
+      <p className="mt-1 font-display text-[clamp(1.7rem,3.5vw,2.4rem)] font-black leading-none tracking-[-0.04em]">
         {value}
       </p>
     </div>

@@ -1,23 +1,35 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tab, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
+import { NetworkInsightsPanel } from "@/components/apply/NetworkInsightsPanel";
 import { useApplyContext } from "@/components/apply/useApplyContext";
+import { useRecruiting } from "@/components/recruiting/useRecruiting";
+import { notesForInterviewPrep } from "@/lib/recruiting/selectors";
 import { applicationToInterviewItem } from "@/lib/apply/interviewFromApplication";
 import { formatInterviewWhen } from "@/data/apply";
 import { cn } from "@/lib/utils";
 import type { InterviewItem, PrepModuleId } from "@/types/apply";
 
-export function InterviewWorkspace() {
+export function InterviewWorkspace({
+  focusApplicationId,
+}: {
+  focusApplicationId?: string;
+}) {
   const { interviewingApps, hydrated } = useApplyContext();
+  const { notes, contacts } = useRecruiting();
   const interviews = useMemo(
     () => interviewingApps.map(applicationToInterviewItem),
     [interviewingApps],
   );
 
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(focusApplicationId ?? null);
   const [moduleId, setModuleId] = useState<PrepModuleId>("product-sense");
+
+  useEffect(() => {
+    if (focusApplicationId) setOpenId(focusApplicationId);
+  }, [focusApplicationId]);
 
   return (
     <div className="space-y-8">
@@ -54,15 +66,19 @@ export function InterviewWorkspace() {
               key={item.id}
               item={item}
               index={i}
-              active={openId === item.id}
+              active={openId === item.applicationId}
               moduleId={moduleId}
+              insights={notesForInterviewPrep(notes, item.applicationId).map((note) => ({
+                note,
+                contact: contacts.find((c) => c.id === note.contactId),
+              }))}
               onModule={setModuleId}
               onToggle={() => {
-                if (openId === item.id) {
+                if (openId === item.applicationId) {
                   setOpenId(null);
                   return;
                 }
-                setOpenId(item.id);
+                setOpenId(item.applicationId);
                 setModuleId("product-sense");
               }}
             />
@@ -78,6 +94,7 @@ function InterviewCard({
   index,
   active,
   moduleId,
+  insights,
   onModule,
   onToggle,
 }: {
@@ -85,6 +102,7 @@ function InterviewCard({
   index: number;
   active: boolean;
   moduleId: PrepModuleId;
+  insights: { note: import("@/types/network").NetworkNote; contact: import("@/types/network").NetworkContact | undefined }[];
   onModule: (id: PrepModuleId) => void;
   onToggle: () => void;
 }) {
@@ -207,6 +225,12 @@ function InterviewCard({
                       </p>
                     </motion.div>
                   </AnimatePresence>
+
+                  <NetworkInsightsPanel
+                    insights={insights}
+                    title="Insights from your network"
+                    emptyLabel="No interview insights yet. Mark notes USE FOR INTERVIEW PREP on related contacts."
+                  />
                 </div>
               </motion.div>
             )}

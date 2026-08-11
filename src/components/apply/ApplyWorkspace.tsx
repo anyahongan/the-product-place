@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { LifecycleTabs } from "@/components/apply/LifecycleTabs";
 import { ApplyDiscover } from "@/components/apply/ApplyDiscover";
 import { AppliedOverview } from "@/components/apply/AppliedOverview";
@@ -7,10 +8,27 @@ import { InterviewWorkspace } from "@/components/apply/InterviewWorkspace";
 import { ApplyProvider } from "@/components/apply/ApplyContext";
 import type { ApplicationMode, LifecycleTab } from "@/types/apply";
 
+const routeApi = getRouteApi("/apply");
+
 export function ApplyWorkspace() {
-  const [tab, setTab] = useState<LifecycleTab>("apply");
+  const search = routeApi.useSearch();
+  const navigate = useNavigate({ from: "/apply" });
+  const [tab, setTab] = useState<LifecycleTab>(search.tab ?? "apply");
   const [mode, setMode] = useState<ApplicationMode>("manual");
   const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (search.tab) setTab(search.tab);
+  }, [search.tab]);
+
+  const onTabChange = (next: LifecycleTab) => {
+    setTab(next);
+    const searchNext: { tab: LifecycleTab; application?: string } = { tab: next };
+    if ((next === "applied" || next === "interviewing") && search.application) {
+      searchNext.application = search.application;
+    }
+    void navigate({ search: searchNext });
+  };
 
   return (
     <ApplyProvider>
@@ -30,7 +48,7 @@ export function ApplyWorkspace() {
               Three workflows on one sheet: discover, track, prepare.
             </p>
             <div className="mt-7">
-              <LifecycleTabs value={tab} onChange={setTab} />
+              <LifecycleTabs value={tab} onChange={onTabChange} />
             </div>
           </header>
 
@@ -43,8 +61,16 @@ export function ApplyWorkspace() {
               transition={{ duration: 0.28, ease: [0.2, 0.9, 0.2, 1] }}
             >
               {tab === "apply" && <ApplyDiscover mode={mode} onModeChange={setMode} />}
-              {tab === "applied" && <AppliedOverview />}
-              {tab === "interviewing" && <InterviewWorkspace />}
+              {tab === "applied" && (
+                <AppliedOverview
+                  {...(search.application ? { focusApplicationId: search.application } : {})}
+                />
+              )}
+              {tab === "interviewing" && (
+                <InterviewWorkspace
+                  {...(search.application ? { focusApplicationId: search.application } : {})}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>

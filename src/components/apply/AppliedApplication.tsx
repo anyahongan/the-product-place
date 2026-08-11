@@ -2,8 +2,13 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
 import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
 import { NetworkingSuggestions } from "@/components/apply/NetworkingSuggestions";
+import { NetworkInsightsPanel } from "@/components/apply/NetworkInsightsPanel";
 import { formatShortDate } from "@/data/apply";
-import { PLACEHOLDER_CONTACTS } from "@/lib/apply/placeholderContacts";
+import { useRecruiting } from "@/components/recruiting/useRecruiting";
+import {
+  notesForApplicationMaterials,
+  referralContactsForApplication,
+} from "@/lib/recruiting/selectors";
 import { cn } from "@/lib/utils";
 import type { ApplicationLifecycleStatus, ApplicationRecord } from "@/lib/apply/types";
 import type { ProgressStage, ToneName } from "@/types/apply";
@@ -62,6 +67,12 @@ export function AppliedApplicationCard({
   const reduced = useReducedMotion();
   const tone = cardTone(app.tone);
   const progress = toProgress(app);
+  const { notes, contacts } = useRecruiting();
+  const insights = notesForApplicationMaterials(notes, app.applicationId).map((note) => ({
+    note,
+    contact: contacts.find((c) => c.id === note.contactId),
+  }));
+  const referrals = referralContactsForApplication(contacts, app.applicationId);
 
   return (
     <motion.article
@@ -96,6 +107,11 @@ export function AppliedApplicationCard({
               {" · "}
               Resume: none yet
             </p>
+            {referrals[0] && (
+              <p className="tag mt-2 uppercase text-ink">
+                Referral · {referrals[0].referralStatus} · {referrals[0].name}
+              </p>
+            )}
           </div>
           <span
             className={cn(
@@ -183,7 +199,8 @@ export function AppliedApplicationCard({
                   ))}
                 </div>
 
-                <NetworkingSuggestions contacts={PLACEHOLDER_CONTACTS} />
+                <NetworkInsightsPanel insights={insights} />
+                <NetworkingSuggestions application={app} />
               </div>
             </motion.div>
           )}

@@ -1,5 +1,18 @@
-import type { useApplications } from "@/hooks/useApplications";
 import type { useProductJobs } from "@/hooks/useProductJobs";
+import type { RecruitingContextValue } from "@/components/recruiting/recruitingContextInstance";
 
-export type ApplyContextValue = ReturnType<typeof useApplications> &
-  ReturnType<typeof useProductJobs>;
+type AppsSlice = Pick<
+  RecruitingContextValue,
+  | "apps"
+  | "savedIds"
+  | "queueIds"
+  | "hydrated"
+  | "interviewingApps"
+  | "stats"
+  | "toggleSaved"
+  | "markApplied"
+  | "addToAutoQueue"
+  | "setStatus"
+>;
+
+export type ApplyContextValue = AppsSlice & ReturnType<typeof useProductJobs>;

@@ -1,7 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { NetworkWorkspace } from "@/components/network/NetworkWorkspace";
+
+export type NetworkSearch = {
+  company?: string;
+  application?: string;
+  contact?: string;
+};
 
 export const Route = createFileRoute("/network")({
+  validateSearch: (search: Record<string, unknown>): NetworkSearch => {
+    const out: NetworkSearch = {};
+    if (typeof search["company"] === "string") out.company = search["company"];
+    if (typeof search["application"] === "string") out.application = search["application"];
+    if (typeof search["contact"] === "string") out.contact = search["contact"];
+    return out;
+  },
   head: () => ({
     meta: [
       { title: "Network — The Product Place" },
@@ -22,20 +35,5 @@ export const Route = createFileRoute("/network")({
 });
 
 function NetworkPage() {
-  return (
-    <PlaceholderPage
-      kicker="Section 02 · Network"
-      title="Network"
-      tone="pink"
-      pattern="grid-fine"
-      blurb="Outreach is a paper trail, not a CRM. Who you wrote to, what you said, what they said back, and the one thing you promised to follow up on."
-      bullets={[
-        "Contacts with company, role and how you met",
-        "Cold-email drafts and the notes behind them",
-        "Referral requests and where each one landed",
-        "Follow-up reminders that surface on Today",
-        "A running history of every conversation",
-      ]}
-    />
-  );
+  return <NetworkWorkspace />;
 }

@@ -42,6 +42,8 @@ export type StatusEvent = {
 export type ApplicationRecord = {
   applicationId: string;
   jobId: string;
+  /** Shared company entity id (`co-*`) — same IDs Network uses */
+  companyId: string;
   company: string;
   title: string;
   dateApplied: string | null;

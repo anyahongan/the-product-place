@@ -1,12 +1,28 @@
 import type { ReactNode } from "react";
 import { ApplyContext } from "@/components/apply/applyContextInstance";
-import { useApplications } from "@/hooks/useApplications";
 import { useProductJobs } from "@/hooks/useProductJobs";
+import { useRecruiting } from "@/components/recruiting/useRecruiting";
 
 export function ApplyProvider({ children }: { children: ReactNode }) {
   const jobsState = useProductJobs();
-  const appsState = useApplications();
+  const recruiting = useRecruiting();
   return (
-    <ApplyContext.Provider value={{ ...jobsState, ...appsState }}>{children}</ApplyContext.Provider>
+    <ApplyContext.Provider
+      value={{
+        ...jobsState,
+        apps: recruiting.apps,
+        savedIds: recruiting.savedIds,
+        queueIds: recruiting.queueIds,
+        hydrated: recruiting.hydrated,
+        interviewingApps: recruiting.interviewingApps,
+        stats: recruiting.stats,
+        toggleSaved: recruiting.toggleSaved,
+        markApplied: recruiting.markApplied,
+        addToAutoQueue: recruiting.addToAutoQueue,
+        setStatus: recruiting.setStatus,
+      }}
+    >
+      {children}
+    </ApplyContext.Provider>
   );
 }
