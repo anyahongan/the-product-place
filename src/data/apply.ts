@@ -750,8 +750,10 @@ export const sampleInterviews: InterviewItem[] = [
   },
 ];
 
-export function formatShortDate(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
+export function formatShortDate(iso: string | null | undefined): string {
+  if (!iso) return "Date unknown";
+  const d = new Date(iso.includes("T") ? iso : `${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return "Date unknown";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 

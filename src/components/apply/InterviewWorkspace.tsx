@@ -1,18 +1,21 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tab, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
-import { formatInterviewWhen, sampleInterviews } from "@/data/apply";
+import { useApplyContext } from "@/components/apply/useApplyContext";
+import { applicationToInterviewItem } from "@/lib/apply/interviewFromApplication";
+import { formatInterviewWhen } from "@/data/apply";
 import { cn } from "@/lib/utils";
-import type { InterviewItem, PrepModuleId, ToneName } from "@/types/apply";
-
-/** Keep purple reserved for expanded prep modules inside the card */
-function cardTone(tone: ToneName): Exclude<ToneName, "purple"> {
-  return tone === "purple" ? "blue" : tone;
-}
+import type { InterviewItem, PrepModuleId } from "@/types/apply";
 
 export function InterviewWorkspace() {
+  const { interviewingApps, hydrated } = useApplyContext();
+  const interviews = useMemo(
+    () => interviewingApps.map(applicationToInterviewItem),
+    [interviewingApps],
+  );
+
   const [openId, setOpenId] = useState<string | null>(null);
   const [moduleId, setModuleId] = useState<PrepModuleId>("product-sense");
 
@@ -27,30 +30,44 @@ export function InterviewWorkspace() {
             <span className="text-blue">Let&apos;s prepare for this role.</span>
           </h2>
           <p className="mt-4 text-[1.02rem] text-ink-soft md:whitespace-nowrap">
-            Active interviews with role-specific modules. Static prompts for now, no AI generation yet.
+            Active interviews with role-specific modules. Static prompts for now, no AI generation
+            yet.
           </p>
         </div>
       </Reveal>
 
       <div className="mx-auto max-w-[42rem] space-y-4">
-        {sampleInterviews.map((item, i) => (
-          <InterviewCard
-            key={item.id}
-            item={item}
-            index={i}
-            active={openId === item.id}
-            moduleId={moduleId}
-            onModule={setModuleId}
-            onToggle={() => {
-              if (openId === item.id) {
-                setOpenId(null);
-                return;
-              }
-              setOpenId(item.id);
-              setModuleId("product-sense");
-            }}
-          />
-        ))}
+        {!hydrated ? (
+          <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
+            <p className="font-display text-[1.3rem] font-black uppercase">Loading interviews</p>
+          </Sheet>
+        ) : interviews.length === 0 ? (
+          <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
+            <p className="font-display text-[1.3rem] font-black uppercase">No interviews yet</p>
+            <p className="mt-2 text-ink-soft">
+              Move an application to Recruiter Screen, Interviewing, or Final Round to see it here.
+            </p>
+          </Sheet>
+        ) : (
+          interviews.map((item, i) => (
+            <InterviewCard
+              key={item.id}
+              item={item}
+              index={i}
+              active={openId === item.id}
+              moduleId={moduleId}
+              onModule={setModuleId}
+              onToggle={() => {
+                if (openId === item.id) {
+                  setOpenId(null);
+                  return;
+                }
+                setOpenId(item.id);
+                setModuleId("product-sense");
+              }}
+            />
+          ))
+        )}
       </div>
     </div>
   );
@@ -73,7 +90,7 @@ function InterviewCard({
 }) {
   const reduced = useReducedMotion();
   const mod = item.modules.find((m) => m.id === moduleId) ?? item.modules[0];
-  const tone = cardTone(item.tone);
+  const tone = item.tone === "purple" ? "blue" : item.tone;
 
   return (
     <Reveal from="left" distance={70} rotate={-1.5} delay={index * 0.06}>
@@ -110,7 +127,9 @@ function InterviewCard({
                 reached={
                   item.progressStage === "Final"
                     ? ["Submitted", "Recruiter Screen", "Interview", "Final"]
-                    : ["Submitted", "Recruiter Screen", "Interview"]
+                    : item.progressStage === "Offer"
+                      ? ["Submitted", "Recruiter Screen", "Interview", "Final", "Offer"]
+                      : ["Submitted", "Recruiter Screen", "Interview"]
                 }
               />
             </div>

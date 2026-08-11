@@ -10,17 +10,17 @@ const modes: {
   {
     id: "manual",
     label: "Manual",
-    blurb: "Opens the original application when you're ready. You drive every step.",
+    blurb: "Opens the original employer application link. You drive every step.",
   },
   {
     id: "quick",
     label: "Quick",
-    blurb: "Will tailor materials and stage an application for your review. Not live yet.",
+    blurb: "Tailored materials coming later. Use Manual to apply for now.",
   },
   {
     id: "auto",
     label: "Auto",
-    blurb: "Will queue eligible roles under your preferences for review. Not live yet.",
+    blurb: "Saves roles to a local Auto Queue only. Never submits applications.",
   },
 ];
 
@@ -77,7 +77,10 @@ export function ApplicationMode({
         })}
       </div>
 
-      <p className="px-4 py-3 text-[0.92rem] leading-snug text-ink-soft md:whitespace-nowrap" id="mode-help">
+      <p
+        className="px-4 py-3 text-[0.92rem] leading-snug text-ink-soft md:whitespace-nowrap"
+        id="mode-help"
+      >
         <span className="tag text-ink">{active.label}: </span>
         {active.blurb}
       </p>

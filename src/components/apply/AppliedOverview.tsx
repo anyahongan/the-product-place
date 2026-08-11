@@ -5,41 +5,33 @@ import {
   AppliedApplicationCard,
   AppliedStatusFilters,
 } from "@/components/apply/AppliedApplication";
-import { useAppliedDraft } from "@/hooks/useAppliedDraft";
-import { sampleApplications } from "@/data/apply";
-import type { AppliedStatus } from "@/types/apply";
+import { useApplyContext } from "@/components/apply/useApplyContext";
+import type { ApplicationLifecycleStatus } from "@/lib/apply/types";
 
 export function AppliedOverview() {
-  const { apps, setStatus } = useAppliedDraft(sampleApplications);
-  const [filter, setFilter] = useState<"all" | AppliedStatus>("all");
+  const { apps, stats, setStatus, hydrated } = useApplyContext();
+  const [filter, setFilter] = useState<"all" | ApplicationLifecycleStatus>("all");
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const stats = useMemo(() => {
-    const waiting = apps.filter((a) => a.status === "waiting").length;
-    const interviewing = apps.filter((a) => a.status === "interviewing").length;
-    const rejected = apps.filter((a) => a.status === "rejected").length;
-    const withdrawn = apps.filter((a) => a.status === "withdrawn").length;
-    return {
-      total: apps.length,
-      waiting,
-      interviewing,
-      rejected,
-      withdrawn,
+  const counts = useMemo(() => {
+    const base: Record<"all" | ApplicationLifecycleStatus, number> = {
+      all: apps.length,
+      Saved: 0,
+      Preparing: 0,
+      Applied: 0,
+      Waiting: 0,
+      "Recruiter Screen": 0,
+      Interviewing: 0,
+      "Final Round": 0,
+      Offer: 0,
+      Rejected: 0,
+      Withdrawn: 0,
     };
+    for (const app of apps) base[app.currentStatus] += 1;
+    return base;
   }, [apps]);
 
-  const counts = useMemo(
-    () => ({
-      all: apps.length,
-      waiting: stats.waiting,
-      interviewing: stats.interviewing,
-      rejected: stats.rejected,
-      withdrawn: stats.withdrawn,
-    }),
-    [apps.length, stats],
-  );
-
-  const visible = apps.filter((a) => (filter === "all" ? true : a.status === filter));
+  const visible = apps.filter((a) => (filter === "all" ? true : a.currentStatus === filter));
 
   return (
     <div className="space-y-8">
@@ -63,32 +55,43 @@ export function AppliedOverview() {
           soft
           pattern="grid"
           shadow="hard"
-          className="relative grid gap-4 px-5 py-6 sm:grid-cols-4 sm:px-8"
+          className="relative grid gap-4 px-5 py-6 sm:grid-cols-5 sm:px-8"
         >
           <Tape className="-top-3 left-10" color="blue" angle={-5} width={120} height={26} />
           <Stat label="Applications" value={stats.total} />
           <Stat label="Waiting" value={stats.waiting} />
           <Stat label="Interviewing" value={stats.interviewing} />
           <Stat label="Rejected" value={stats.rejected} />
+          <Stat label="Offers" value={stats.offers} />
         </Sheet>
       </Reveal>
 
       <AppliedStatusFilters value={filter} onChange={setFilter} counts={counts} />
 
       <div className="space-y-5">
-        {visible.length === 0 ? (
+        {!hydrated ? (
           <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
-            <p className="font-display text-[1.4rem] font-black uppercase">No matches</p>
-            <p className="tag mt-2 text-ink-faint">Try another status filter.</p>
+            <p className="font-display text-[1.4rem] font-black uppercase">Loading applications</p>
+          </Sheet>
+        ) : visible.length === 0 ? (
+          <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
+            <p className="font-display text-[1.4rem] font-black uppercase">
+              {apps.length === 0 ? "No applications yet" : "No matches"}
+            </p>
+            <p className="tag mt-2 text-ink-faint">
+              {apps.length === 0
+                ? "Mark a role as applied from the Apply tab to see it here."
+                : "Try another status filter."}
+            </p>
           </Sheet>
         ) : (
           visible.map((app) => (
             <AppliedApplicationCard
-              key={app.id}
+              key={app.applicationId}
               app={app}
-              expanded={openId === app.id}
-              onToggle={() => setOpenId(openId === app.id ? null : app.id)}
-              onStatusChange={(status) => setStatus(app.id, status)}
+              expanded={openId === app.applicationId}
+              onToggle={() => setOpenId(openId === app.applicationId ? null : app.applicationId)}
+              onStatusChange={(status) => setStatus(app.applicationId, status)}
             />
           ))
         )}

@@ -4,7 +4,8 @@ import { Reveal } from "@/components/paper/Reveal";
 import { formatShortDate, EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from "@/data/apply";
 import { modeCta } from "@/components/apply/modeCta";
 import { cn } from "@/lib/utils";
-import type { ApplicationMode, JobListing as Job } from "@/types/apply";
+import type { ApplicationMode } from "@/types/apply";
+import type { JobListingView } from "@/lib/apply/types";
 
 const offsets = ["lg:ml-0", "lg:ml-[6%]", "lg:ml-[2%]", "lg:ml-[10%]"];
 
@@ -13,21 +14,27 @@ export function JobListing({
   index,
   mode,
   saved,
+  applied,
   onView,
   onSave,
   onApply,
+  onMarkApplied,
 }: {
-  job: Job;
+  job: JobListingView;
   index: number;
   mode: ApplicationMode;
   saved: boolean;
+  applied: boolean;
   onView: () => void;
   onSave: () => void;
   onApply: () => void;
+  onMarkApplied: () => void;
 }) {
   const reduced = useReducedMotion();
   const light = job.tone === "yellow" || job.tone === "green";
   const offset = offsets[index % offsets.length] ?? "";
+  const workLabel = job.workMode ? WORK_MODE_LABELS[job.workMode] : "Work mode unknown";
+  const empLabel = job.employmentType ? EMPLOYMENT_TYPE_LABELS[job.employmentType] : "Type unknown";
 
   return (
     <Reveal
@@ -55,15 +62,23 @@ export function JobListing({
             className="flex w-max flex-col border-2 border-ink px-3 py-2"
             style={{ background: `var(--${job.tone})` }}
           >
-            <span className={cn("tag", light ? "text-ink" : "text-paper")}>Match</span>
+            <span className={cn("tag", light ? "text-ink" : "text-paper")}>
+              {job.matchPercent != null ? "Match" : "Role"}
+            </span>
             <span
               className={cn(
-                "font-display text-[2rem] font-black leading-none tracking-[-0.04em]",
+                "font-display text-[1.35rem] font-black leading-none tracking-[-0.04em]",
                 light ? "text-ink" : "text-paper",
               )}
             >
-              {job.matchPercent}
-              <span className="text-[1rem]">%</span>
+              {job.matchPercent != null ? (
+                <>
+                  {job.matchPercent}
+                  <span className="text-[1rem]">%</span>
+                </>
+              ) : (
+                <span className="text-[0.95rem] uppercase">Open</span>
+              )}
             </span>
           </div>
 
@@ -79,13 +94,15 @@ export function JobListing({
             </div>
 
             <p className="tag mt-3 text-ink-faint">
-              {job.location} · {WORK_MODE_LABELS[job.workMode]} ·{" "}
-              {EMPLOYMENT_TYPE_LABELS[job.employmentType]}
+              {job.location} · {workLabel} · {empLabel}
+              {job.closed ? " · Closed" : ""}
             </p>
             <p className="tag mt-1 text-ink-faint">
               Posted {formatShortDate(job.postedDate)}
               {job.deadline ? ` · Due ${formatShortDate(job.deadline)}` : ""}
-              {" · "}’{job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}
+              {job.graduationYears.length
+                ? ` · ’${job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}`
+                : " · Grad year unknown"}
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -110,9 +127,21 @@ export function JobListing({
               <button
                 type="button"
                 onClick={onApply}
-                className="focus-ink border-2 border-ink bg-yellow px-3 py-2 font-display text-sm font-black uppercase outline-none hover:translate-x-0.5"
+                disabled={job.closed || !job.applicationUrl}
+                className="focus-ink border-2 border-ink bg-yellow px-3 py-2 font-display text-sm font-black uppercase outline-none hover:translate-x-0.5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {modeCta(mode)}
+              </button>
+              <button
+                type="button"
+                onClick={onMarkApplied}
+                aria-pressed={applied}
+                className={cn(
+                  "focus-ink border-2 border-ink px-3 py-2 font-display text-sm font-black uppercase outline-none",
+                  applied ? "bg-green text-paper" : "bg-paper hover:bg-green-wash",
+                )}
+              >
+                {applied ? "Applied" : "Mark applied"}
               </button>
             </div>
           </div>

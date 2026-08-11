@@ -10,7 +10,13 @@ import {
   WORK_MODE_LABELS,
 } from "@/data/apply";
 import { countActiveFilters } from "@/components/apply/filterJobs";
-import type { EmploymentType, JobFiltersState, JobSort, ProductRole, WorkMode } from "@/types/apply";
+import type {
+  EmploymentType,
+  JobFiltersState,
+  JobSort,
+  ProductRole,
+  WorkMode,
+} from "@/types/apply";
 
 function toggleIn<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -55,10 +61,10 @@ function FilterGroup({ title, children }: { title: string; children: ReactNode }
 }
 
 const SORT_OPTIONS: { id: JobSort; label: string }[] = [
-  { id: "best-match", label: "Best match" },
+  { id: "opening-date", label: "Newest" },
+  { id: "oldest-opening", label: "Oldest" },
   { id: "due-date", label: "Due date" },
-  { id: "opening-date", label: "Opening date (newest)" },
-  { id: "oldest-opening", label: "Opening date (oldest)" },
+  { id: "best-match", label: "Best match" },
   { id: "company", label: "Company A to Z" },
 ];
 
@@ -199,9 +205,7 @@ export function JobFiltersForm({
               <CheckRow
                 key={type}
                 checked={filters.employmentTypes.includes(type)}
-                onChange={() =>
-                  set({ employmentTypes: toggleIn(filters.employmentTypes, type) })
-                }
+                onChange={() => set({ employmentTypes: toggleIn(filters.employmentTypes, type) })}
               >
                 {EMPLOYMENT_TYPE_LABELS[type]}
               </CheckRow>

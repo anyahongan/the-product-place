@@ -14,11 +14,7 @@ export type WorkMode = "remote" | "hybrid" | "in-person";
 export type EmploymentType = "internship" | "part-time" | "full-time";
 
 export type JobSort =
-  | "due-date"
-  | "opening-date"
-  | "best-match"
-  | "oldest-opening"
-  | "company";
+  "due-date" | "opening-date" | "best-match" | "oldest-opening" | "company" | "newest" | "oldest";
 
 export type ApplicationMode = "manual" | "quick" | "auto";
 

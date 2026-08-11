@@ -3,18 +3,24 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
 import { EMPLOYMENT_TYPE_LABELS, formatShortDate, WORK_MODE_LABELS } from "@/data/apply";
 import { modeCta } from "@/components/apply/modeCta";
-import type { ApplicationMode, JobListing } from "@/types/apply";
+import { cn } from "@/lib/utils";
+import type { ApplicationMode } from "@/types/apply";
+import type { JobListingView } from "@/lib/apply/types";
 
 export function JobDetail({
   job,
   mode,
+  applied,
   onClose,
   onApply,
+  onMarkApplied,
 }: {
-  job: JobListing | null;
+  job: JobListingView | null;
   mode: ApplicationMode;
+  applied: boolean;
   onClose: () => void;
   onApply: () => void;
+  onMarkApplied: () => void;
 }) {
   const reduced = useReducedMotion();
 
@@ -85,13 +91,11 @@ export function JobDetail({
                   {job.productRole}
                 </span>
                 <span className="tag border-2 border-ink bg-paper px-2 py-1">
-                  {job.location} · {WORK_MODE_LABELS[job.workMode]}
+                  {job.location} ·{" "}
+                  {job.workMode ? WORK_MODE_LABELS[job.workMode] : "Work mode unknown"}
                 </span>
                 <span className="tag border-2 border-ink bg-paper px-2 py-1">
-                  {EMPLOYMENT_TYPE_LABELS[job.employmentType]}
-                </span>
-                <span className="tag border-2 border-ink bg-paper px-2 py-1">
-                  Match {job.matchPercent}%
+                  {job.employmentType ? EMPLOYMENT_TYPE_LABELS[job.employmentType] : "Type unknown"}
                 </span>
               </div>
 
@@ -102,11 +106,15 @@ export function JobDetail({
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="tag text-ink-faint">Deadline</dt>
-                  <dd>{job.deadline ? formatShortDate(job.deadline) : "Rolling"}</dd>
+                  <dd>{job.deadline ? formatShortDate(job.deadline) : "Not specified"}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="tag text-ink-faint">Eligibility</dt>
-                  <dd>’{job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}</dd>
+                  <dd>
+                    {job.graduationYears.length
+                      ? `’${job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}`
+                      : "Not specified"}
+                  </dd>
                 </div>
               </dl>
 
@@ -117,47 +125,50 @@ export function JobDetail({
                 </p>
               </section>
 
-              <section className="mt-6">
-                <h3 className="font-display text-[1.15rem] font-black uppercase">
-                  Responsibilities
-                </h3>
-                <ul className="mt-2 space-y-2">
-                  {job.responsibilities.map((item) => (
-                    <li key={item} className="flex gap-3 text-[0.95rem] text-ink-soft">
-                      <span aria-hidden className="mt-[0.4rem] h-2.5 w-2.5 shrink-0 bg-blue" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="mt-6">
-                <h3 className="font-display text-[1.15rem] font-black uppercase">Requirements</h3>
-                <ul className="mt-2 space-y-2">
-                  {job.requirements.map((item) => (
-                    <li key={item} className="flex gap-3 text-[0.95rem] text-ink-soft">
-                      <span aria-hidden className="mt-[0.4rem] h-2.5 w-2.5 shrink-0 bg-ink" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              {job.responsibilities.length > 0 && (
+                <section className="mt-6">
+                  <h3 className="font-display text-[1.15rem] font-black uppercase">
+                    Responsibilities
+                  </h3>
+                  <ul className="mt-2 space-y-2">
+                    {job.responsibilities.map((item) => (
+                      <li key={item} className="flex gap-3 text-[0.95rem] text-ink-soft">
+                        <span aria-hidden className="mt-[0.4rem] h-2.5 w-2.5 shrink-0 bg-blue" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               <div className="mt-8 grid gap-2">
                 <button
                   type="button"
                   onClick={onApply}
-                  className="focus-ink border-2 border-ink bg-yellow px-4 py-3 font-display text-base font-black uppercase outline-none"
+                  disabled={job.closed || !job.applicationUrl}
+                  className="focus-ink border-2 border-ink bg-yellow px-4 py-3 font-display text-base font-black uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {modeCta(mode)}
                 </button>
+                <button
+                  type="button"
+                  onClick={onMarkApplied}
+                  className={cn(
+                    "focus-ink border-2 border-ink px-4 py-3 font-display text-base font-black uppercase outline-none",
+                    applied ? "bg-green text-paper" : "bg-paper hover:bg-green-wash",
+                  )}
+                >
+                  {applied ? "Marked applied" : "Mark applied"}
+                </button>
                 <p className="tag text-ink-faint">
-                  Demo only, does not submit a real application.
+                  Manual mode opens the employer link. Nothing is auto-submitted.
                 </p>
               </div>
 
               <div className="mt-6 grid gap-2 border-2 border-dashed border-ink/40 bg-paper/70 p-4">
-                <p className="tag text-ink-faint">Coming later, not implemented</p>
+                <p className="tag text-ink-faint">
+                  Quick Apply tailored materials coming later. Not available yet.
+                </p>
                 <button
                   type="button"
                   disabled

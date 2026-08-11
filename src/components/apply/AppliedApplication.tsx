@@ -3,21 +3,49 @@ import { Clip, Sheet, Tape } from "@/components/paper/Paper";
 import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
 import { NetworkingSuggestions } from "@/components/apply/NetworkingSuggestions";
 import { formatShortDate } from "@/data/apply";
+import { PLACEHOLDER_CONTACTS } from "@/lib/apply/placeholderContacts";
 import { cn } from "@/lib/utils";
-import type { AppliedApplication as App, AppliedStatus, ToneName } from "@/types/apply";
+import type { ApplicationLifecycleStatus, ApplicationRecord } from "@/lib/apply/types";
+import type { ProgressStage, ToneName } from "@/types/apply";
+import { APPLICATION_STATUSES } from "@/lib/apply/types";
 
-const statusStyle: Record<AppliedStatus, string> = {
-  waiting: "bg-yellow text-ink",
-  interviewing: "bg-purple text-paper",
-  rejected: "bg-ink text-paper",
-  withdrawn: "bg-paper-2 text-ink",
+const statusStyle: Record<ApplicationLifecycleStatus, string> = {
+  Saved: "bg-paper-2 text-ink",
+  Preparing: "bg-yellow-wash text-ink",
+  Applied: "bg-blue text-paper",
+  Waiting: "bg-yellow text-ink",
+  "Recruiter Screen": "bg-green text-paper",
+  Interviewing: "bg-purple text-paper",
+  "Final Round": "bg-purple text-paper",
+  Offer: "bg-green text-paper",
+  Rejected: "bg-ink text-paper",
+  Withdrawn: "bg-paper-2 text-ink",
 };
 
-const statuses: AppliedStatus[] = ["waiting", "interviewing", "rejected", "withdrawn"];
-
-/** Keep pink reserved for the "Haven't heard back?" callout */
 function cardTone(tone: ToneName): Exclude<ToneName, "pink"> {
   return tone === "pink" ? "blue" : tone;
+}
+
+function toProgress(app: ApplicationRecord): {
+  current: ProgressStage;
+  reached: ProgressStage[];
+} {
+  const map: Record<ApplicationLifecycleStatus, ProgressStage> = {
+    Saved: "Submitted",
+    Preparing: "Submitted",
+    Applied: "Submitted",
+    Waiting: "Submitted",
+    "Recruiter Screen": "Recruiter Screen",
+    Interviewing: "Interview",
+    "Final Round": "Final",
+    Offer: "Offer",
+    Rejected: "Submitted",
+    Withdrawn: "Submitted",
+  };
+  const order: ProgressStage[] = ["Submitted", "Recruiter Screen", "Interview", "Final", "Offer"];
+  const current = map[app.currentStatus];
+  const idx = order.indexOf(current);
+  return { current, reached: order.slice(0, Math.max(idx + 1, 1)) };
 }
 
 export function AppliedApplicationCard({
@@ -26,13 +54,14 @@ export function AppliedApplicationCard({
   onToggle,
   onStatusChange,
 }: {
-  app: App;
+  app: ApplicationRecord;
   expanded: boolean;
   onToggle: () => void;
-  onStatusChange: (status: AppliedStatus) => void;
+  onStatusChange: (status: ApplicationLifecycleStatus) => void;
 }) {
   const reduced = useReducedMotion();
   const tone = cardTone(app.tone);
+  const progress = toProgress(app);
 
   return (
     <motion.article
@@ -59,23 +88,27 @@ export function AppliedApplicationCard({
             <h3 className="font-display text-[1.4rem] font-black sm:text-[1.7rem]">
               {app.company}
             </h3>
-            <p className="mt-1 text-[0.98rem] text-ink-soft">{app.role}</p>
+            <p className="mt-1 text-[0.98rem] text-ink-soft">{app.title}</p>
             <p className="tag mt-2 text-ink-faint">
-              Applied {formatShortDate(app.dateApplied)} · {app.resumeVersion}
+              {app.dateApplied
+                ? `Applied ${formatShortDate(app.dateApplied)}`
+                : "Not marked applied yet"}
+              {" · "}
+              Resume: none yet
             </p>
           </div>
           <span
             className={cn(
               "tag w-max border-2 border-ink px-2 py-1 uppercase",
-              statusStyle[app.status],
+              statusStyle[app.currentStatus],
             )}
           >
-            {app.status}
+            {app.currentStatus}
           </span>
         </button>
 
         <div className="mt-4">
-          <ApplicationProgress current={app.currentStage} reached={app.stagesReached} />
+          <ApplicationProgress current={progress.current} reached={progress.reached} />
         </div>
 
         <AnimatePresence initial={false}>
@@ -92,18 +125,39 @@ export function AppliedApplicationCard({
 
                 <h4 className="font-display text-[1.05rem] font-black uppercase">Materials used</h4>
                 <ul className="mt-2 space-y-1 text-[0.95rem] text-ink-soft">
-                  <li>Resume: {app.resumeVersion}</li>
-                  <li>Cover letter: {app.coverLetter ? app.coverLetter : "None attached"}</li>
+                  <li>Resume: {app.resumeUsed ?? "None attached yet"}</li>
+                  <li>Cover letter: {app.coverLetterUsed ?? "None attached yet"}</li>
                 </ul>
 
+                {(app.applyUrl || app.sourceUrl) && (
+                  <div className="mt-5">
+                    <h4 className="font-display text-[1.05rem] font-black uppercase">
+                      Original link
+                    </h4>
+                    <a
+                      href={app.applyUrl || app.sourceUrl || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tag mt-2 inline-block text-blue underline-offset-2 hover:underline"
+                    >
+                      Open application / source →
+                    </a>
+                  </div>
+                )}
+
                 <h4 className="mt-5 font-display text-[1.05rem] font-black uppercase">
-                  Application history
+                  Status history
                 </h4>
                 <ol className="mt-2 space-y-2">
-                  {app.history.map((h) => (
-                    <li key={`${h.date}-${h.note}`} className="flex gap-3 text-[0.92rem]">
-                      <span className="tag shrink-0 text-ink-faint">{formatShortDate(h.date)}</span>
-                      <span className="text-ink-soft">{h.note}</span>
+                  {app.statusHistory.map((h, i) => (
+                    <li
+                      key={`${h.status}-${h.timestamp}-${i}`}
+                      className="flex gap-3 text-[0.92rem]"
+                    >
+                      <span className="tag shrink-0 text-ink-faint">
+                        {formatShortDate(h.timestamp.slice(0, 10))}
+                      </span>
+                      <span className="text-ink-soft">{h.status}</span>
                     </li>
                   ))}
                 </ol>
@@ -111,17 +165,17 @@ export function AppliedApplicationCard({
                 <h4 className="mt-5 font-display text-[1.05rem] font-black uppercase">
                   Update status
                 </h4>
-                <p className="tag mt-1 text-ink-faint">Local UI state only</p>
+                <p className="tag mt-1 text-ink-faint">Saved locally on this device</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {statuses.map((s) => (
+                  {APPLICATION_STATUSES.map((s) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => onStatusChange(s)}
-                      aria-pressed={app.status === s}
+                      aria-pressed={app.currentStatus === s}
                       className={cn(
                         "focus-ink tag border-2 border-ink px-2.5 py-1.5 uppercase outline-none",
-                        app.status === s ? statusStyle[s] : "bg-paper hover:bg-blue-wash",
+                        app.currentStatus === s ? statusStyle[s] : "bg-paper hover:bg-blue-wash",
                       )}
                     >
                       {s}
@@ -129,7 +183,7 @@ export function AppliedApplicationCard({
                   ))}
                 </div>
 
-                <NetworkingSuggestions contacts={app.contacts} />
+                <NetworkingSuggestions contacts={PLACEHOLDER_CONTACTS} />
               </div>
             </motion.div>
           )}
@@ -144,15 +198,18 @@ export function AppliedStatusFilters({
   onChange,
   counts,
 }: {
-  value: "all" | AppliedStatus;
-  onChange: (v: "all" | AppliedStatus) => void;
-  counts: Record<"all" | AppliedStatus, number>;
+  value: "all" | ApplicationLifecycleStatus;
+  onChange: (v: "all" | ApplicationLifecycleStatus) => void;
+  counts: Record<"all" | ApplicationLifecycleStatus, number>;
 }) {
-  const options: { id: "all" | AppliedStatus; label: string }[] = [
+  const options: { id: "all" | ApplicationLifecycleStatus; label: string }[] = [
     { id: "all", label: "All" },
-    { id: "waiting", label: "Waiting" },
-    { id: "rejected", label: "Rejected" },
-    { id: "withdrawn", label: "Withdrawn" },
+    { id: "Waiting", label: "Waiting" },
+    { id: "Applied", label: "Applied" },
+    { id: "Interviewing", label: "Interviewing" },
+    { id: "Offer", label: "Offers" },
+    { id: "Rejected", label: "Rejected" },
+    { id: "Withdrawn", label: "Withdrawn" },
   ];
 
   return (
