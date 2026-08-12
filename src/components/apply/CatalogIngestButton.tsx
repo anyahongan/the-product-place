@@ -20,7 +20,7 @@ export function CatalogIngestButton() {
     <div className="mt-4 border-2 border-dashed border-ink/40 bg-paper-2 px-3 py-3">
       <p className="tag text-ink-faint">Dev · job catalog</p>
       <p className="mt-1 text-[0.85rem] text-ink-soft">
-        Manual GitHub → Supabase ingest (no schedule). Requires server service-role env.
+        Manual GitHub → Supabase ingest (no schedule). Requires server SUPABASE_SECRET_KEY.
       </p>
       <div className="mt-2">
         <PinkHoverButton

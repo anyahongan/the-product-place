@@ -1,8 +1,16 @@
 import type { ApplicationRecord, ApplicationLifecycleStatus, StatusEvent } from "@/lib/apply/types";
 import type { NetworkContact, NetworkNote, TimelineEvent } from "@/types/network";
 import type { ContactApplicationLink } from "@/types/recruiting";
+import { companyIdFromName } from "@/types/recruiting";
 import type { ToneName } from "@/types/apply";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+
+function isUuid(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
 
 export async function loadPersonalFromSupabase(userId: string): Promise<{
   apps: ApplicationRecord[];
@@ -23,7 +31,16 @@ export async function loadPersonalFromSupabase(userId: string): Promise<{
     supabase.from("saved_jobs").select("job_id, auto_queue").eq("user_id", userId),
   ]);
 
-  if (appsRes.error || contactsRes.error) return null;
+  if (appsRes.error || contactsRes.error || notesRes.error || linksRes.error || savedRes.error) {
+    console.error("loadPersonalFromSupabase", {
+      apps: appsRes.error,
+      contacts: contactsRes.error,
+      notes: notesRes.error,
+      links: linksRes.error,
+      saved: savedRes.error,
+    });
+    return null;
+  }
 
   const appRows = appsRes.data ?? [];
   const appIds = appRows.map((a) => a.id as string);
@@ -82,26 +99,35 @@ export async function loadPersonalFromSupabase(userId: string): Promise<{
     relatedByContact.set(l.contactId, arr);
   }
 
-  const apps: ApplicationRecord[] = appRows.map((a) => ({
-    applicationId: a.id as string,
-    jobId: (a.job_id as string) || (a.legacy_job_id as string) || `legacy-${a.id}`,
-    companyId:
-      (a.company_id as string) ||
-      ((a.job_snapshot as { companyId?: string } | null)?.companyId ?? `co-unknown`),
-    company: a.company_name as string,
-    title: a.title as string,
-    dateApplied: (a.date_applied as string) ?? null,
-    currentStatus: a.current_status as ApplicationLifecycleStatus,
-    statusHistory: eventsByApp.get(a.id as string) ?? [
-      { status: a.current_status as ApplicationLifecycleStatus, timestamp: a.created_at as string },
-    ],
-    resumeUsed: null,
-    coverLetterUsed: null,
-    applyUrl: (a.apply_url as string) ?? null,
-    sourceUrl: (a.source_url as string) ?? null,
-    autoQueued: Boolean(a.auto_queued),
-    tone: (a.tone as ToneName) || "blue",
-  }));
+  const apps: ApplicationRecord[] = appRows.map((a) => {
+    const snapshot = a.job_snapshot as
+      | { companyId?: string; catalogCompanyId?: string }
+      | null;
+    // Prefer snapshot UI/legacy company id (co-*) so Network deep-links keep working.
+    // applications.company_id may be the shared catalog UUID — do not use it as Network companyId.
+    const snapUi = snapshot?.companyId && !isUuid(snapshot.companyId) ? snapshot.companyId : null;
+    const rawUi =
+      typeof a.company_id === "string" && !isUuid(a.company_id) ? (a.company_id as string) : null;
+    const uiCompanyId = snapUi || rawUi || companyIdFromName((a.company_name as string) || "Unknown");
+    return {
+      applicationId: a.id as string,
+      jobId: (a.job_id as string) || (a.legacy_job_id as string) || `legacy-${a.id}`,
+      companyId: uiCompanyId,
+      company: a.company_name as string,
+      title: a.title as string,
+      dateApplied: (a.date_applied as string) ?? null,
+      currentStatus: a.current_status as ApplicationLifecycleStatus,
+      statusHistory: eventsByApp.get(a.id as string) ?? [
+        { status: a.current_status as ApplicationLifecycleStatus, timestamp: a.created_at as string },
+      ],
+      resumeUsed: null,
+      coverLetterUsed: null,
+      applyUrl: (a.apply_url as string) ?? null,
+      sourceUrl: (a.source_url as string) ?? null,
+      autoQueued: Boolean(a.auto_queued),
+      tone: (a.tone as ToneName) || "blue",
+    };
+  });
 
   const contacts: NetworkContact[] = (contactsRes.data ?? []).map((c) => ({
     id: c.id as string,

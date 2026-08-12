@@ -28,6 +28,7 @@ export function toJobListingView(job: NormalizedJob, index = 0): JobListingView 
     requirements: [],
     tone: TONES[index % TONES.length]!,
     closed: job.status === "closed",
+    catalogCompanyId: job.catalogCompanyId ?? null,
   };
 }
 

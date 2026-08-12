@@ -19,6 +19,8 @@ export type NormalizedJob = {
   description: string | null;
   status: "open" | "closed" | "unknown";
   dedupeKey: string;
+  /** Shared catalog companies.id when loaded from Supabase jobs.company_id */
+  catalogCompanyId?: string | null;
 };
 
 export type ApplicationLifecycleStatus =
@@ -78,6 +80,8 @@ export type JobListingView = {
   requirements: string[];
   tone: ToneName;
   closed: boolean;
+  /** Shared catalog companies.id when this listing came from Supabase */
+  catalogCompanyId?: string | null;
 };
 
 export const INTERVIEW_ELIGIBLE_STATUSES: ApplicationLifecycleStatus[] = [

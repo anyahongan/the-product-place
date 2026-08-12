@@ -48,6 +48,7 @@ function rowToNormalized(row: JobRow): NormalizedJob {
     description: row.description,
     status: row.is_active ? "open" : "closed",
     dedupeKey: row.dedupe_key,
+    catalogCompanyId: row.company_id,
   };
 }
 

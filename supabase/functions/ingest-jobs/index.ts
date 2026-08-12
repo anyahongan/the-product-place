@@ -1,14 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 /**
- * Supabase Edge Function: manual GitHub job ingestion.
- *
- * Privileged credentials come ONLY from Deno.env (Supabase project secrets):
- *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, optional INGEST_SECRET
- * Never accept service-role keys from the request body or browser.
- * Service-role bypasses RLS — do not log or return the key.
- *
- * Set secrets: npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=...
+ * Privileged credentials come ONLY from Deno.env (Supabase project / platform):
+ *   SUPABASE_URL,
+ *   SUPABASE_SECRET_KEY (preferred) or SUPABASE_SERVICE_ROLE_KEY (legacy / often auto-injected),
+ *   optional INGEST_SECRET
+ * Never accept secret keys from the request body or browser.
+ * Secret / service-role keys bypass RLS — do not log or return them.
  *
  * Prefer TanStack `ingestGitHubJobsFn` for full local upsert; this Edge Function
  * is the production-shaped entrypoint. Keep scheduling OFF until approved.
@@ -25,14 +23,15 @@ Deno.serve(async (req) => {
   }
 
   const url = Deno.env.get("SUPABASE_URL");
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const key =
+    Deno.env.get("SUPABASE_SECRET_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) {
     return new Response(JSON.stringify({ error: "Missing service credentials" }), {
       status: 500,
     });
   }
 
-  // Optional caller auth via shared INGEST_SECRET (also Deno.env only — not the service role).
+  // Optional caller auth via shared INGEST_SECRET (also Deno.env only — not the secret key).
   const ingestSecret = Deno.env.get("INGEST_SECRET");
   const auth = req.headers.get("Authorization") ?? "";
   if (ingestSecret) {
@@ -41,7 +40,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Always use Deno.env service role — never a key from the client request.
+  // Always use Deno.env privileged key — never a key from the client request.
   const supabase = createClient(url, key);
 
   try {

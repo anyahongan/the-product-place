@@ -33,6 +33,17 @@ import { RecruitingContext } from "@/components/recruiting/recruitingContextInst
 import { useAuth } from "@/components/auth/AuthProvider";
 import { loadPersonalFromSupabase } from "@/lib/supabase/personalDataRepository";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import {
+  markJobApplied,
+  persistContactChange,
+  persistNotesDiff,
+  saveJob,
+  setSavedAutoQueue,
+  unsaveJob,
+  updateApplicationStatus,
+} from "@/lib/supabase/personalWrites";
+
+type PersistenceMode = "local" | "supabase";
 
 export function RecruitingProvider({ children }: { children: ReactNode }) {
   const { user, migrationStatus } = useAuth();
@@ -44,7 +55,9 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<NetworkNote[]>([]);
   const [links, setLinks] = useState<ContactApplicationLink[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [cloudMode, setCloudMode] = useState(false);
+  const [persistenceMode, setPersistenceMode] = useState<PersistenceMode>("local");
+  const [cloudReady, setCloudReady] = useState(false);
+  const [persistError, setPersistError] = useState<string | null>(null);
 
   const hydrateLocal = useCallback(() => {
     const loadedApps = listApplications();
@@ -71,75 +84,109 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     setLinks(personal.links);
     setSavedIds(new Set(listSavedJobIds()));
     setQueueIds(new Set(listAutoQueueIds()));
-    setCloudMode(false);
+    setPersistenceMode("local");
+    setCloudReady(false);
     setHydrated(true);
   }, []);
 
+  // Signed-out / unconfigured: local mode
   useEffect(() => {
+    if (user && isSupabaseConfigured()) return;
     hydrateLocal();
-  }, [hydrateLocal]);
+  }, [user, hydrateLocal]);
 
-  // After sign-in + migration, load private data from Supabase (single source of truth).
+  // Authenticated: wait for migration, then load Supabase as source of truth (even if empty).
   useEffect(() => {
-    if (!isSupabaseConfigured() || !user || migrationStatus !== "done") return;
+    if (!isSupabaseConfigured() || !user) return;
+    if (migrationStatus === "running" || migrationStatus === "idle") {
+      setCloudReady(false);
+      return;
+    }
+    if (migrationStatus === "error") {
+      setPersistError("Local data migration failed; personal cloud sync paused.");
+      setCloudReady(false);
+      return;
+    }
+
     let cancelled = false;
+    setCloudReady(false);
     void loadPersonalFromSupabase(user.id).then((remote) => {
-      if (cancelled || !remote) return;
-      if (remote.apps.length === 0 && remote.contacts.length === 0) return;
+      if (cancelled) return;
+      if (!remote) {
+        setPersistError("Could not load personal data from Supabase.");
+        setCloudReady(false);
+        return;
+      }
+      // Keep local company catalog for Network UI chrome; personal records from remote only.
+      // Recommended (unsaved) contact suggestions remain local chrome until the user saves them.
+      const localRecommended = hydrateNetworkPersonal().contacts.filter((c) => c.isRecommended);
+      const remoteIds = new Set(remote.contacts.map((c) => c.id));
+      const remoteNames = new Set(remote.contacts.map((c) => `${c.companyId}::${c.name}`.toLowerCase()));
+      const suggestions = localRecommended.filter(
+        (c) =>
+          !remoteIds.has(c.id) &&
+          !remoteNames.has(`${c.companyId}::${c.name}`.toLowerCase()),
+      );
+      setCompanies(ensureSeedCompanies(listCompanies()));
       setApps(remote.apps);
-      setContacts(remote.contacts);
+      setContacts([...remote.contacts, ...suggestions]);
       setNotes(remote.notes);
       setLinks(remote.links);
       setSavedIds(new Set(remote.savedIds));
       setQueueIds(new Set(remote.queueIds));
-      setCloudMode(true);
+      setPersistenceMode("supabase");
+      setPersistError(null);
+      setCloudReady(true);
+      setHydrated(true);
     });
     return () => {
       cancelled = true;
     };
   }, [user, migrationStatus]);
 
-  // Sign out → clear cloud session state and restore local prototype data.
+  // Sign out → clear private in-memory state, restore local prototype (not previous user's cloud).
   useEffect(() => {
     if (user) return;
     if (!hydrated) return;
-    if (cloudMode) hydrateLocal();
-  }, [user, hydrated, cloudMode, hydrateLocal]);
+    if (persistenceMode === "supabase") hydrateLocal();
+  }, [user, hydrated, persistenceMode, hydrateLocal]);
 
+  // localStorage writes ONLY in local mode (never overwrite while authenticated to Supabase).
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || persistenceMode !== "local") return;
     saveApplications(apps);
-  }, [apps, hydrated]);
+  }, [apps, hydrated, persistenceMode]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || persistenceMode !== "local") return;
     saveSavedJobIds([...savedIds]);
-  }, [savedIds, hydrated]);
+  }, [savedIds, hydrated, persistenceMode]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || persistenceMode !== "local") return;
     saveAutoQueueIds([...queueIds]);
-  }, [queueIds, hydrated]);
+  }, [queueIds, hydrated, persistenceMode]);
 
   useEffect(() => {
     if (!hydrated) return;
+    // Company catalog chrome can stay local in both modes.
     saveCompanies(companies);
   }, [companies, hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || persistenceMode !== "local") return;
     saveContacts(contacts);
-  }, [contacts, hydrated]);
+  }, [contacts, hydrated, persistenceMode]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || persistenceMode !== "local") return;
     saveNotes(notes);
-  }, [notes, hydrated]);
+  }, [notes, hydrated, persistenceMode]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || persistenceMode !== "local") return;
     saveContactApplicationLinks(links);
-  }, [links, hydrated]);
+  }, [links, hydrated, persistenceMode]);
 
   const ensureCompanyForJob = useCallback((job: JobListingView) => {
     let companyId = "";
@@ -155,81 +202,224 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     return companyId;
   }, []);
 
-  const toggleSaved = useCallback((jobId: string) => {
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(jobId)) next.delete(jobId);
-      else next.add(jobId);
-      return next;
-    });
-  }, []);
+  const toggleSaved = useCallback(
+    (jobId: string) => {
+      const wasSaved = savedIds.has(jobId);
+      const nextSaved = new Set(savedIds);
+      if (wasSaved) nextSaved.delete(jobId);
+      else nextSaved.add(jobId);
+      setSavedIds(nextSaved);
 
-  const markApplied = useCallback((job: JobListingView) => {
-    setCompanies((prevCompanies) => {
-      const { companies: nextCompanies, company } = upsertCompanyByName(
-        prevCompanies,
-        job.company,
-        job.tone === "pink" ? "blue" : job.tone,
-      );
-      setApps((prev) => {
-        const existing = findApplicationByJobId(prev, job.id);
-        if (existing) {
-          return upsertApplication(prev, {
-            ...appendStatus(existing, "Applied"),
-            companyId: existing.companyId || company.id,
-            company: job.company,
-          });
+      if (persistenceMode !== "supabase" || !user) return;
+
+      void (async () => {
+        try {
+          if (wasSaved) await unsaveJob(user.id, jobId);
+          else await saveJob(user.id, jobId, queueIds.has(jobId));
+          setPersistError(null);
+        } catch (e) {
+          setSavedIds(savedIds);
+          setPersistError(e instanceof Error ? e.message : "Failed to update saved job");
         }
-        return upsertApplication(prev, createAppliedRecord(job, "Applied", company.id));
+      })();
+    },
+    [savedIds, queueIds, persistenceMode, user],
+  );
+
+  const markApplied = useCallback(
+    (job: JobListingView) => {
+      setCompanies((prevCompanies) => {
+        const { companies: nextCompanies, company } = upsertCompanyByName(
+          prevCompanies,
+          job.company,
+          job.tone === "pink" ? "blue" : job.tone,
+        );
+
+        if (persistenceMode !== "supabase" || !user) {
+          setApps((prev) => {
+            const existing = findApplicationByJobId(prev, job.id);
+            if (existing) {
+              return upsertApplication(prev, {
+                ...appendStatus(existing, "Applied"),
+                companyId: existing.companyId || company.id,
+                company: job.company,
+              });
+            }
+            return upsertApplication(prev, createAppliedRecord(job, "Applied", company.id));
+          });
+          return nextCompanies;
+        }
+
+        const existing = findApplicationByJobId(apps, job.id);
+        void markJobApplied(user.id, job, existing ? { ...existing, companyId: existing.companyId || company.id } : undefined)
+          .then((saved) => {
+            setApps((prev) => upsertApplication(prev, { ...saved, companyId: saved.companyId || company.id }));
+            setSavedIds((prev) => new Set(prev).add(job.id));
+            void saveJob(user.id, job.id, queueIds.has(job.id)).catch(() => undefined);
+            setPersistError(null);
+          })
+          .catch((e) => {
+            setPersistError(e instanceof Error ? e.message : "Failed to mark applied");
+          });
+
+        return nextCompanies;
       });
-      return nextCompanies;
-    });
-  }, []);
+    },
+    [persistenceMode, user, apps, queueIds],
+  );
 
-  const addToAutoQueue = useCallback((job: JobListingView) => {
-    setQueueIds((prev) => new Set(prev).add(job.id));
-    setCompanies((prevCompanies) => {
-      const { companies: nextCompanies, company } = upsertCompanyByName(
-        prevCompanies,
-        job.company,
-        job.tone === "pink" ? "blue" : job.tone,
-      );
-      setApps((prev) => {
-        const existing = findApplicationByJobId(prev, job.id);
-        if (existing) {
-          return upsertApplication(prev, {
-            ...existing,
-            autoQueued: true,
-            companyId: existing.companyId || company.id,
+  const addToAutoQueue = useCallback(
+    (job: JobListingView) => {
+      setQueueIds((prev) => new Set(prev).add(job.id));
+      setSavedIds((prev) => new Set(prev).add(job.id));
+      setCompanies((prevCompanies) => {
+        const { companies: nextCompanies, company } = upsertCompanyByName(
+          prevCompanies,
+          job.company,
+          job.tone === "pink" ? "blue" : job.tone,
+        );
+        if (persistenceMode !== "supabase" || !user) {
+          setApps((prev) => {
+            const existing = findApplicationByJobId(prev, job.id);
+            if (existing) {
+              return upsertApplication(prev, {
+                ...existing,
+                autoQueued: true,
+                companyId: existing.companyId || company.id,
+              });
+            }
+            return upsertApplication(prev, {
+              ...createAppliedRecord(job, "Saved", company.id),
+              autoQueued: true,
+            });
           });
+          return nextCompanies;
         }
-        return upsertApplication(prev, {
-          ...createAppliedRecord(job, "Saved", company.id),
-          autoQueued: true,
+
+        void setSavedAutoQueue(user.id, job.id, true)
+          .then(() => setPersistError(null))
+          .catch((e) =>
+            setPersistError(e instanceof Error ? e.message : "Failed to update auto-queue"),
+          );
+        return nextCompanies;
+      });
+    },
+    [persistenceMode, user],
+  );
+
+  const setStatus = useCallback(
+    (applicationId: string, status: ApplicationLifecycleStatus) => {
+      const app = apps.find((a) => a.applicationId === applicationId);
+      if (!app) return;
+
+      if (persistenceMode !== "supabase" || !user) {
+        setApps((prev) =>
+          prev.map((a) => (a.applicationId === applicationId ? appendStatus(a, status) : a)),
+        );
+        return;
+      }
+
+      const snapshot = apps;
+      void updateApplicationStatus(user.id, app, status)
+        .then((next) => {
+          setApps((prev) => prev.map((a) => (a.applicationId === applicationId ? next : a)));
+          setPersistError(null);
+        })
+        .catch((e) => {
+          setApps(snapshot);
+          setPersistError(e instanceof Error ? e.message : "Failed to update status");
         });
+    },
+    [apps, persistenceMode, user],
+  );
+
+  const updateContact = useCallback(
+    (next: NetworkContact) => {
+      const prev = contacts.find((c) => c.id === next.id);
+      setContacts((list) => list.map((c) => (c.id === next.id ? next : c)));
+      setLinks((prevLinks) => syncLinksFromContact(prevLinks, next));
+
+      if (persistenceMode !== "supabase" || !user) return;
+      // Skip pure recommended (unsaved) contacts until promoted / outreach
+      if (next.isRecommended && (!prev || prev.isRecommended)) return;
+
+      void persistContactChange(user.id, prev, { ...next, isRecommended: false }, links)
+        .then(({ contact, links: nextLinks }) => {
+          setContacts((list) =>
+            list.map((c) => (c.id === next.id || c.id === contact.id ? contact : c)),
+          );
+          setLinks(nextLinks);
+          setNotes((ns) =>
+            ns.map((n) => (n.contactId === next.id && contact.id !== next.id ? { ...n, contactId: contact.id } : n)),
+          );
+          setPersistError(null);
+        })
+        .catch((e) => {
+          if (prev) setContacts((list) => list.map((c) => (c.id === next.id ? prev : c)));
+          setPersistError(e instanceof Error ? e.message : "Failed to save contact");
+        });
+    },
+    [contacts, links, persistenceMode, user],
+  );
+
+  const setContactsState = useCallback(
+    (next: NetworkContact[] | ((prev: NetworkContact[]) => NetworkContact[])) => {
+      setContacts((prev) => {
+        const resolved = typeof next === "function" ? next(prev) : next;
+        if (persistenceMode === "supabase" && user) {
+          // Persist contacts that were promoted or mutated vs prev
+          const prevById = new Map(prev.map((c) => [c.id, c]));
+          for (const c of resolved) {
+            const before = prevById.get(c.id);
+            const promoted = before?.isRecommended && !c.isRecommended;
+            const mutated = before && JSON.stringify(before) !== JSON.stringify(c);
+            if (promoted || (mutated && !c.isRecommended)) {
+              void persistContactChange(user.id, before, c, links)
+                .then(({ contact, links: nextLinks }) => {
+                  setContacts((list) =>
+                    list.map((x) => (x.id === c.id || x.id === contact.id ? contact : x)),
+                  );
+                  setLinks(nextLinks);
+                  setNotes((ns) =>
+                    ns.map((n) =>
+                      n.contactId === c.id && contact.id !== c.id
+                        ? { ...n, contactId: contact.id }
+                        : n,
+                    ),
+                  );
+                })
+                .catch((e) =>
+                  setPersistError(e instanceof Error ? e.message : "Failed to sync contacts"),
+                );
+            }
+          }
+        }
+        return resolved;
       });
-      return nextCompanies;
-    });
-  }, []);
+    },
+    [persistenceMode, user, links],
+  );
 
-  const setStatus = useCallback((applicationId: string, status: ApplicationLifecycleStatus) => {
-    setApps((prev) =>
-      prev.map((app) => (app.applicationId === applicationId ? appendStatus(app, status) : app)),
-    );
-  }, []);
-
-  const updateContact = useCallback((next: NetworkContact) => {
-    setContacts((prev) => prev.map((c) => (c.id === next.id ? next : c)));
-    setLinks((prev) => syncLinksFromContact(prev, next));
-  }, []);
-
-  const setContactsState = useCallback((next: NetworkContact[] | ((prev: NetworkContact[]) => NetworkContact[])) => {
-    setContacts(next);
-  }, []);
-
-  const setNotesState = useCallback((next: NetworkNote[] | ((prev: NetworkNote[]) => NetworkNote[])) => {
-    setNotes(next);
-  }, []);
+  const setNotesState = useCallback(
+    (next: NetworkNote[] | ((prev: NetworkNote[]) => NetworkNote[])) => {
+      setNotes((prev) => {
+        const resolved = typeof next === "function" ? next(prev) : next;
+        if (persistenceMode === "supabase" && user) {
+          void persistNotesDiff(user.id, prev, resolved)
+            .then((synced) => {
+              setNotes(synced);
+              setPersistError(null);
+            })
+            .catch((e) => {
+              setNotes(prev);
+              setPersistError(e instanceof Error ? e.message : "Failed to sync notes");
+            });
+        }
+        return resolved;
+      });
+    },
+    [persistenceMode, user],
+  );
 
   const addCompanyToCatalog = useCallback((company: Company) => {
     setCompanies((prev) => (prev.some((c) => c.id === company.id) ? prev : [...prev, company]));
@@ -268,7 +458,7 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     apps,
     savedIds,
     queueIds,
-    hydrated,
+    hydrated: hydrated && (!user || !isSupabaseConfigured() || cloudReady || migrationStatus === "error"),
     interviewingApps,
     stats,
     companies,
@@ -286,5 +476,21 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     ensureCompanyForJob,
   };
 
-  return <RecruitingContext.Provider value={value}>{children}</RecruitingContext.Provider>;
+  return (
+    <RecruitingContext.Provider value={value}>
+      {persistError && (
+        <div className="fixed bottom-3 left-1/2 z-[90] max-w-lg -translate-x-1/2 border-2 border-ink bg-yellow-wash px-4 py-2 text-center text-[0.85rem] text-ink shadow-hard-sm">
+          Sync error: {persistError}
+          <button
+            type="button"
+            className="ml-3 underline"
+            onClick={() => setPersistError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      {children}
+    </RecruitingContext.Provider>
+  );
 }

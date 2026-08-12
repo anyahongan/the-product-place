@@ -7,7 +7,8 @@ import type { IngestionSummary } from "@/lib/ingestion/types";
 /**
  * Manual server-side ingestion trigger (no schedule yet).
  *
- * Privileged credential: SUPABASE_SERVICE_ROLE_KEY (server env only).
+ * Privileged credential: SUPABASE_SECRET_KEY (preferred) or legacy
+ * SUPABASE_SERVICE_ROLE_KEY — server env only.
  * Bypasses RLS — never expose to the browser, never use a VITE_ prefix.
  * Client code may call this RPC; the handler runs only on the server.
  */
