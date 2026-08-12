@@ -214,32 +214,55 @@ export async function ingestJobsFromAdapter(
           summary.newJobs += 1;
         }
 
-        const sourceUrl = job.sourceUrl || job.applyUrl || `dedupe:${job.dedupeKey}`;
-        const { data: srcRec } = await supabase
-          .from("job_source_records")
-          .select("id")
-          .eq("source_id", sourceId)
-          .eq("source_url", sourceUrl)
-          .maybeSingle();
+        // Attribution URL (may repeat across jobs from the same tracker page).
+        const sourceUrl =
+          job.applyUrl || job.sourceUrl || `provenance:${job.dedupeKey}`;
+        const externalId = job.id;
+
+        // Identity: prefer (source_id, external_id), else (source_id, job_id).
+        let srcRec: { id: string } | null = null;
+        if (externalId) {
+          const byExternal = await supabase
+            .from("job_source_records")
+            .select("id")
+            .eq("source_id", sourceId)
+            .eq("external_id", externalId)
+            .maybeSingle();
+          if (byExternal.error) throw byExternal.error;
+          srcRec = byExternal.data;
+        }
+        if (!srcRec?.id) {
+          const byJob = await supabase
+            .from("job_source_records")
+            .select("id")
+            .eq("source_id", sourceId)
+            .eq("job_id", jobId)
+            .maybeSingle();
+          if (byJob.error) throw byJob.error;
+          srcRec = byJob.data;
+        }
 
         if (srcRec?.id) {
-          await supabase
+          const { error: srcUpdErr } = await supabase
             .from("job_source_records")
             .update({
               job_id: jobId,
-              external_id: job.id,
+              external_id: externalId,
+              source_url: sourceUrl,
               raw_title: job.title,
               raw_company: job.company,
               raw_location: job.location,
+              raw_payload: { dedupeKey: job.dedupeKey },
               last_seen_at: now,
               updated_at: now,
             })
             .eq("id", srcRec.id);
+          if (srcUpdErr) throw srcUpdErr;
         } else {
-          await supabase.from("job_source_records").insert({
+          const { error: srcInsErr } = await supabase.from("job_source_records").insert({
             job_id: jobId,
             source_id: sourceId,
-            external_id: job.id,
+            external_id: externalId,
             source_url: sourceUrl,
             raw_title: job.title,
             raw_company: job.company,
@@ -248,6 +271,7 @@ export async function ingestJobsFromAdapter(
             first_discovered_at: now,
             last_seen_at: now,
           });
+          if (srcInsErr) throw srcInsErr;
         }
       } catch {
         summary.errors += 1;
