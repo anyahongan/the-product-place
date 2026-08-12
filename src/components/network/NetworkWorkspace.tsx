@@ -131,18 +131,31 @@ export function NetworkWorkspace() {
 
   useEffect(() => {
     if (!hydrated || searchApplied) return;
+
     if (search.company && catalog.some((c) => c.id === search.company)) {
       setCompanyId(search.company);
       setVisibleIds((prev) =>
         prev.includes(search.company!) ? prev : [...prev, search.company!],
       );
     }
+
+    // Apply → Network: use application id only to focus the correct company (no application bar).
+    if (search.application) {
+      const app = apps.find((a) => a.applicationId === search.application);
+      if (app && catalog.some((c) => c.id === app.companyId)) {
+        setCompanyId(app.companyId);
+        setVisibleIds((prev) =>
+          prev.includes(app.companyId) ? prev : [...prev, app.companyId],
+        );
+      }
+    }
+
     if (search.contact) {
       setSelectedId(search.contact);
       setView("contacts");
     }
     setSearchApplied(true);
-  }, [hydrated, search, catalog, searchApplied]);
+  }, [hydrated, search, catalog, searchApplied, apps]);
 
   const saveFormatPref = (pref: CommunicationFormatPreference) => {
     setFormatPref(pref);

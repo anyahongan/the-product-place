@@ -41,7 +41,7 @@ export function FollowUpQueue({
 
       {actionable.length === 0 && (
         <p className="border-2 border-dashed border-ink/40 bg-paper px-4 py-8 text-ink-soft">
-          Nothing queued for this company filter. Switch companies or clear the application filter.
+          Nothing queued for this company. Switch companies or add a next action on a contact.
         </p>
       )}
 
