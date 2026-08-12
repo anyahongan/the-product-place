@@ -15,6 +15,7 @@ import { Route as CreateRouteImport } from './routes/create'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as NetworkRouteImport } from './routes/network'
 import { Route as PracticeRouteImport } from './routes/practice'
+import { Route as ProfileRouteImport } from './routes/profile'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const PracticeRoute = PracticeRouteImport.update({
   path: '/practice',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/learn': typeof LearnRoute
   '/network': typeof NetworkRoute
   '/practice': typeof PracticeRoute
+  '/profile': typeof ProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/learn': typeof LearnRoute
   '/network': typeof NetworkRoute
   '/practice': typeof PracticeRoute
+  '/profile': typeof ProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,12 +79,27 @@ export interface FileRoutesById {
   '/learn': typeof LearnRoute
   '/network': typeof NetworkRoute
   '/practice': typeof PracticeRoute
+  '/profile': typeof ProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apply' | '/create' | '/learn' | '/network' | '/practice'
+  fullPaths:
+    | '/'
+    | '/apply'
+    | '/create'
+    | '/learn'
+    | '/network'
+    | '/practice'
+    | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apply' | '/create' | '/learn' | '/network' | '/practice'
+  to:
+    | '/'
+    | '/apply'
+    | '/create'
+    | '/learn'
+    | '/network'
+    | '/practice'
+    | '/profile'
   id:
     | '__root__'
     | '/'
@@ -85,6 +108,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/network'
     | '/practice'
+    | '/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,6 +118,7 @@ export interface RootRouteChildren {
   LearnRoute: typeof LearnRoute
   NetworkRoute: typeof NetworkRoute
   PracticeRoute: typeof PracticeRoute
+  ProfileRoute: typeof ProfileRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -140,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PracticeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -150,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   LearnRoute: LearnRoute,
   NetworkRoute: NetworkRoute,
   PracticeRoute: PracticeRoute,
+  ProfileRoute: ProfileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

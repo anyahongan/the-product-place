@@ -12,7 +12,7 @@ Until `VITE_SUPABASE_*` is set, the app keeps working with:
 ```
 GitHub adapter (and future sources)
   → normalize / classify / dedupe
-  → server ingestion (service role)
+  → server ingestion (secret / service-role key)
   → companies + jobs + job_source_records
 
 Apply UI ← jobs table (or live fallback)
@@ -41,6 +41,10 @@ Or paste, in order, in the SQL editor:
 
 1. `supabase/migrations/20260812000001_core_job_catalog.sql`
 2. `supabase/migrations/20260812000002_personal_recruiting_data.sql`
+3. `supabase/migrations/20260812000003_job_source_records_identity.sql` (if not already applied)
+4. `supabase/migrations/20260812000004_profile_master_resume.sql` — Profile + private `resumes` Storage bucket
+
+Profile / Master Resume requires migration `20260812000004`. After `db push` (or SQL paste), confirm in Dashboard → Storage that the private **resumes** bucket exists.
 
 ## 3. Project URL + publishable key
 
@@ -48,8 +52,9 @@ Supabase Dashboard → **Project Settings → API**:
 
 - Project URL → `VITE_SUPABASE_URL` (and optionally `SUPABASE_URL` for server)
 - `anon` / publishable key → `VITE_SUPABASE_PUBLISHABLE_KEY` only
+- secret key → `SUPABASE_SECRET_KEY` (server only; never `VITE_`)
 
-**Never** put the service-role / secret key in any `VITE_` variable. It bypasses RLS and must never enter the browser bundle.
+**Never** put the secret / service-role key in any `VITE_` variable. It bypasses RLS and must never enter the browser bundle.
 
 ## 4. Create `.env.local`
 
@@ -59,17 +64,19 @@ Copy `.env.example` → `.env.local`. Real env files (`.env`, `.env.local`, `.en
 
 ```
 VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
 **Server only (required only for local GitHub → Supabase ingestion):**
 
 ```
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...   # NEVER VITE_ — bypasses RLS
+SUPABASE_SECRET_KEY=sb_secret_...   # NEVER VITE_ — bypasses RLS
+# Optional legacy fallback:
+# SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
-You do **not** need the service-role key in `.env.local` just to sign in or read the public job catalog. You need it for `ingestGitHubJobsFn` / the DEV catalog ingest control.
+You do **not** need the secret key in `.env.local` just to sign in or read the public job catalog. You need it for `ingestGitHubJobsFn` / the DEV catalog ingest control.
 
 Restart `npm run dev` after changing env.
 
@@ -84,10 +91,13 @@ Header shows **Sign in** when Vite env is present.
 
 ## 6. Edge Function secrets (separate from `.env.local`)
 
-Deployed Edge Functions read secrets from the Supabase project — **not** from Vite or the browser:
+Deployed Edge Functions read credentials from the Supabase project / platform env — **not** from Vite or the browser.
+
+Hosted functions often already receive `SUPABASE_URL` and a privileged key. Prefer `SUPABASE_SECRET_KEY` when setting secrets manually; `SUPABASE_SERVICE_ROLE_KEY` remains a supported fallback (and is still commonly auto-injected).
 
 ```bash
-npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=...
+# Optional if not already injected by the platform:
+npx supabase secrets set SUPABASE_SECRET_KEY=...
 npx supabase secrets set INGEST_SECRET=some-long-random-string
 npx supabase functions deploy ingest-jobs
 ```
@@ -96,7 +106,7 @@ The Edge Function is a **smoke / schedule attachment point**. Full upsert pipeli
 
 ## 7. First catalog ingestion (recommended)
 
-With service role in server env, trigger from a small server call / REPL, or add a temporary admin button that calls:
+With `SUPABASE_SECRET_KEY` in server env, trigger from a small server call / REPL, or add a temporary admin button that calls:
 
 ```ts
 import { ingestGitHubJobsFn } from "@/lib/ingestion/ingestJobs.server";

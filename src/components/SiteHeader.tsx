@@ -8,6 +8,7 @@ import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 const nav = [
   { to: "/apply", label: "Apply", color: "blue", onColor: "paper" },
   { to: "/network", label: "Network", color: "pink", onColor: "ink" },
+  { to: "/profile", label: "Profile", color: "yellow", onColor: "ink" },
   { to: "/learn", label: "Learn", color: "green", onColor: "ink" },
   { to: "/create", label: "Create", color: "purple", onColor: "paper" },
   { to: "/practice", label: "Practice", color: "yellow", onColor: "ink" },
