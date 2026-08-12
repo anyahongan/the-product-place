@@ -2,10 +2,12 @@ import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const PINK = "var(--pink)";
+const YELLOW_WASH = "var(--yellow-wash)";
 const PAPER = "var(--paper)";
 const INK = "var(--ink)";
 
 type Variant = "paper" | "ink" | "close" | "closeSm" | "xs" | "tag";
+type HoverAccent = "pink" | "yellow";
 
 const baseByVariant: Record<Variant, string> = {
   paper:
@@ -20,11 +22,12 @@ const baseByVariant: Record<Variant, string> = {
 };
 
 /**
- * Guaranteed pink hover fill (same approach as the outreach-format chooser).
- * CSS-only hover was unreliable / too subtle on this page.
+ * Guaranteed hover fill (CSS-only hover was unreliable / too subtle on this page).
+ * Default accent is pink; use hoverAccent="yellow" for pale yellow (auth controls).
  */
 export function PinkHoverButton({
   variant = "paper",
+  hoverAccent = "pink",
   className,
   children,
   style,
@@ -35,11 +38,14 @@ export function PinkHoverButton({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
+  hoverAccent?: HoverAccent;
   children: ReactNode;
 }) {
   const [hot, setHot] = useState(false);
   const idleBg = variant === "ink" ? INK : PAPER;
   const idleFg = variant === "ink" ? PAPER : INK;
+  const hotBg = hoverAccent === "yellow" ? YELLOW_WASH : PINK;
+  const hotFg = hoverAccent === "yellow" ? INK : PAPER;
 
   return (
     <button
@@ -48,8 +54,8 @@ export function PinkHoverButton({
       className={cn(baseByVariant[variant], className)}
       style={{
         ...style,
-        background: hot ? PINK : ((style?.background as string | undefined) ?? idleBg),
-        color: hot ? PAPER : ((style?.color as string | undefined) ?? idleFg),
+        background: hot ? hotBg : ((style?.background as string | undefined) ?? idleBg),
+        color: hot ? hotFg : ((style?.color as string | undefined) ?? idleFg),
       }}
       onMouseEnter={(e) => {
         setHot(true);

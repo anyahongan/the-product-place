@@ -22,7 +22,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
             dev server.
           </p>
           <div className="mt-4">
-            <PinkHoverButton variant="closeSm" onClick={onClose}>
+            <PinkHoverButton variant="closeSm" hoverAccent="yellow" onClick={onClose}>
               Close
             </PinkHoverButton>
           </div>
@@ -55,7 +55,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
               {mode === "signin" ? "Sign in" : "Create account"}
             </h2>
           </div>
-          <PinkHoverButton variant="closeSm" onClick={onClose}>
+          <PinkHoverButton variant="closeSm" hoverAccent="yellow" onClick={onClose}>
             Close
           </PinkHoverButton>
         </div>

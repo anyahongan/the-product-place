@@ -69,7 +69,11 @@ export function SiteHeader() {
                   Sign out
                 </PinkHoverButton>
               ) : (
-                <PinkHoverButton variant="xs" onClick={() => setAuthOpen(true)}>
+                <PinkHoverButton
+                  variant="xs"
+                  hoverAccent="yellow"
+                  onClick={() => setAuthOpen(true)}
+                >
                   Sign in
                 </PinkHoverButton>
               ))}
