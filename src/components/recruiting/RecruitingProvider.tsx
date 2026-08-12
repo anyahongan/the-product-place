@@ -30,8 +30,12 @@ import {
   syncLinksFromContact,
 } from "@/lib/recruiting/networkRepository";
 import { RecruitingContext } from "@/components/recruiting/recruitingContextInstance";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { loadPersonalFromSupabase } from "@/lib/supabase/personalDataRepository";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export function RecruitingProvider({ children }: { children: ReactNode }) {
+  const { user, migrationStatus } = useAuth();
   const [apps, setApps] = useState<ApplicationRecord[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [queueIds, setQueueIds] = useState<Set<string>>(new Set());
@@ -40,8 +44,9 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<NetworkNote[]>([]);
   const [links, setLinks] = useState<ContactApplicationLink[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [cloudMode, setCloudMode] = useState(false);
 
-  useEffect(() => {
+  const hydrateLocal = useCallback(() => {
     const loadedApps = listApplications();
     let companyCatalog = ensureSeedCompanies(listCompanies());
 
@@ -66,8 +71,40 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     setLinks(personal.links);
     setSavedIds(new Set(listSavedJobIds()));
     setQueueIds(new Set(listAutoQueueIds()));
+    setCloudMode(false);
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    hydrateLocal();
+  }, [hydrateLocal]);
+
+  // After sign-in + migration, load private data from Supabase (single source of truth).
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !user || migrationStatus !== "done") return;
+    let cancelled = false;
+    void loadPersonalFromSupabase(user.id).then((remote) => {
+      if (cancelled || !remote) return;
+      if (remote.apps.length === 0 && remote.contacts.length === 0) return;
+      setApps(remote.apps);
+      setContacts(remote.contacts);
+      setNotes(remote.notes);
+      setLinks(remote.links);
+      setSavedIds(new Set(remote.savedIds));
+      setQueueIds(new Set(remote.queueIds));
+      setCloudMode(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, migrationStatus]);
+
+  // Sign out → clear cloud session state and restore local prototype data.
+  useEffect(() => {
+    if (user) return;
+    if (!hydrated) return;
+    if (cloudMode) hydrateLocal();
+  }, [user, hydrated, cloudMode, hydrateLocal]);
 
   useEffect(() => {
     if (!hydrated) return;

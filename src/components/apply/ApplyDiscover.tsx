@@ -13,6 +13,7 @@ import {
 } from "@/components/apply/filterJobs";
 import type { ApplicationMode as Mode, JobFiltersState } from "@/types/apply";
 import type { JobListingView } from "@/lib/apply/types";
+import { CatalogIngestButton } from "@/components/apply/CatalogIngestButton";
 
 export function ApplyDiscover({
   mode,
@@ -136,6 +137,7 @@ export function ApplyDiscover({
             {warnings.length > 0 && (
               <p className="tag text-ink-faint">Partial source load: {warnings.join(" · ")}</p>
             )}
+            <CatalogIngestButton />
 
             {visible.length === 0 ? (
               <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">

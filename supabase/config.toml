@@ -1,0 +1,12 @@
+# Supabase project config (TOML required by CLI / GitHub integration).
+# Auth settings here are NOT applied to hosted production by GitHub deploy;
+# configure Auth in the Supabase Dashboard.
+
+project_id = "the-product-place"
+
+[db]
+major_version = 15
+
+# Declared so GitHub "Deploy to production" can deploy this function.
+[functions.ingest-jobs]
+verify_jwt = false
