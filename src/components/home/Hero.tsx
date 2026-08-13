@@ -107,17 +107,6 @@ export function Hero() {
               {w}
             </motion.span>
           ))}
-
-          {/* washi strip driving horizontally across the type */}
-          <motion.span
-            aria-hidden
-            initial={reduced ? false : { scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.5, ease: [0.2, 0.9, 0.2, 1] }}
-            className="tape absolute -left-[10vw] top-[42%] h-[34px] w-[86vw] origin-left"
-            style={{ rotate: "-2.4deg", ["--tape-color" as string]: "var(--pink)" }}
-          />
         </h1>
 
         <div className="relative mt-10 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
