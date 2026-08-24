@@ -45,6 +45,8 @@ export type ProfileRecord = ProfileBasics &
   ProfileApplicationDetails & {
     id: string;
     updatedAt: string;
+    onboardingCompleted: boolean;
+    onboardingCompletedAt: string | null;
   };
 
 export type ProfileTargets = {

@@ -14,7 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "../components/SiteHeader";
 import { RecruitingProvider } from "@/components/recruiting/RecruitingProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-
+import { OnboardingGate } from "@/components/auth/OnboardingGate";
 
 function NotFoundComponent() {
   return (
@@ -84,8 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "The Product Place" },
       {
         name: "description",
-        content:
-          "A personal workspace for students pursuing product management.",
+        content: "A personal workspace for students pursuing product management.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -138,8 +137,10 @@ function RootComponent() {
       <AuthProvider>
         <RecruitingProvider>
           <SiteHeader />
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
+          <OnboardingGate>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </OnboardingGate>
         </RecruitingProvider>
       </AuthProvider>
     </QueryClientProvider>

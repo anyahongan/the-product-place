@@ -38,6 +38,8 @@ function emptyProfile(userId: string): ProfileRecord {
     workAuthorizationStatus: "",
     requiresSponsorship: null,
     updatedAt: new Date().toISOString(),
+    onboardingCompleted: false,
+    onboardingCompletedAt: null,
   };
 }
 
@@ -48,8 +50,7 @@ function mapProfile(row: Record<string, unknown>, userId: string): ProfileRecord
     school: (row["school"] as string) || "",
     major: (row["major"] as string) || "",
     minor: (row["minor"] as string) || "",
-    graduationYear:
-      typeof row["graduation_year"] === "number" ? row["graduation_year"] : null,
+    graduationYear: typeof row["graduation_year"] === "number" ? row["graduation_year"] : null,
     currentLocation: (row["current_location"] as string) || "",
     preferredEmail: (row["preferred_email"] as string) || "",
     phone: (row["phone"] as string) || "",
@@ -62,6 +63,9 @@ function mapProfile(row: Record<string, unknown>, userId: string): ProfileRecord
     requiresSponsorship:
       typeof row["requires_sponsorship"] === "boolean" ? row["requires_sponsorship"] : null,
     updatedAt: (row["updated_at"] as string) || new Date().toISOString(),
+    onboardingCompleted: Boolean(row["onboarding_completed"]),
+    onboardingCompletedAt:
+      typeof row["onboarding_completed_at"] === "string" ? row["onboarding_completed_at"] : null,
   };
 }
 
@@ -91,10 +95,7 @@ export async function loadTargets(userId: string): Promise<ProfileTargets> {
       .eq("user_id", userId)
       .order("sort_order", { ascending: true }),
     sb.from("profile_work_mode_preferences").select("work_mode").eq("user_id", userId),
-    sb
-      .from("profile_employment_type_preferences")
-      .select("employment_type")
-      .eq("user_id", userId),
+    sb.from("profile_employment_type_preferences").select("employment_type").eq("user_id", userId),
   ]);
   if (rolesRes.error) throw rolesRes.error;
   if (locsRes.error) throw locsRes.error;
@@ -172,10 +173,7 @@ export async function updateApplicationDetails(
   return mapProfile(data, userId);
 }
 
-export async function updateTargetRoles(
-  userId: string,
-  roles: ProductRole[],
-): Promise<void> {
+export async function updateTargetRoles(userId: string, roles: ProductRole[]): Promise<void> {
   const sb = client();
   const unique = [...new Set(roles)];
   const { error: delErr } = await sb
@@ -184,9 +182,9 @@ export async function updateTargetRoles(
     .eq("user_id", userId);
   if (delErr) throw delErr;
   if (unique.length === 0) return;
-  const { error } = await sb.from("profile_role_preferences").insert(
-    unique.map((role) => ({ user_id: userId, role })),
-  );
+  const { error } = await sb
+    .from("profile_role_preferences")
+    .insert(unique.map((role) => ({ user_id: userId, role })));
   if (error) throw error;
 }
 
@@ -199,9 +197,9 @@ export async function updateWorkModes(userId: string, modes: WorkMode[]): Promis
     .eq("user_id", userId);
   if (delErr) throw delErr;
   if (unique.length === 0) return;
-  const { error } = await sb.from("profile_work_mode_preferences").insert(
-    unique.map((work_mode) => ({ user_id: userId, work_mode })),
-  );
+  const { error } = await sb
+    .from("profile_work_mode_preferences")
+    .insert(unique.map((work_mode) => ({ user_id: userId, work_mode })));
   if (error) throw error;
 }
 
@@ -217,9 +215,9 @@ export async function updateEmploymentTypes(
     .eq("user_id", userId);
   if (delErr) throw delErr;
   if (unique.length === 0) return;
-  const { error } = await sb.from("profile_employment_type_preferences").insert(
-    unique.map((employment_type) => ({ user_id: userId, employment_type })),
-  );
+  const { error } = await sb
+    .from("profile_employment_type_preferences")
+    .insert(unique.map((employment_type) => ({ user_id: userId, employment_type })));
   if (error) throw error;
 }
 
@@ -255,6 +253,41 @@ export async function replaceLocations(
 
 export function emptyProfileRecord(userId: string): ProfileRecord {
   return emptyProfile(userId);
+}
+
+/** Lightweight flag check for Account Setup routing. */
+export async function loadOnboardingCompleted(userId: string): Promise<boolean> {
+  const sb = client();
+  const { data, error } = await sb
+    .from("profiles")
+    .select("onboarding_completed")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    await ensureProfile(userId);
+    return false;
+  }
+  return Boolean(data["onboarding_completed"]);
+}
+
+/** Mark Account Setup finished. Only call from the final Ready step. */
+export async function markOnboardingComplete(userId: string): Promise<ProfileRecord> {
+  await ensureProfile(userId);
+  const sb = client();
+  const completedAt = new Date().toISOString();
+  const { data, error } = await sb
+    .from("profiles")
+    .update({
+      onboarding_completed: true,
+      onboarding_completed_at: completedAt,
+      updated_at: completedAt,
+    })
+    .eq("id", userId)
+    .select("*")
+    .single();
+  if (error || !data) throw error ?? new Error("Could not complete account setup.");
+  return mapProfile(data, userId);
 }
 
 export type { StandardApplicationAnswer };

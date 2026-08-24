@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -18,6 +18,8 @@ export function SiteHeader() {
   const [condensed, setCondensed] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const { configured, user, signOut, migrationStatus, migrationMessage } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onSetup = pathname === "/setup";
 
   useEffect(() => {
     const onScroll = () => setCondensed(window.scrollY > 24);
@@ -35,30 +37,38 @@ export function SiteHeader() {
         )}
       >
         <div className="mx-auto flex max-w-[1320px] items-center gap-4 px-5 sm:px-8">
-          <Link
-            to="/"
-            className="focus-ink shrink-0 border-2 border-ink bg-ink px-2.5 py-1 font-display text-[0.9rem] font-black uppercase tracking-[-0.02em] text-paper transition-transform hover:-translate-y-[2px] focus:outline-none sm:text-[1rem]"
-          >
-            The Product Place
-          </Link>
+          {onSetup ? (
+            <span className="shrink-0 border-2 border-ink bg-ink px-2.5 py-1 font-display text-[0.9rem] font-black uppercase tracking-[-0.02em] text-paper sm:text-[1rem]">
+              The Product Place
+            </span>
+          ) : (
+            <Link
+              to="/"
+              className="focus-ink shrink-0 border-2 border-ink bg-ink px-2.5 py-1 font-display text-[0.9rem] font-black uppercase tracking-[-0.02em] text-paper transition-transform hover:-translate-y-[2px] focus:outline-none sm:text-[1rem]"
+            >
+              The Product Place
+            </Link>
+          )}
 
           <nav className="ml-auto flex min-w-0 items-center gap-1 overflow-x-auto sm:gap-2">
-            {nav.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="focus-ink shrink-0 border-2 border-transparent px-2 py-1 font-display text-[0.78rem] font-extrabold uppercase tracking-[0.04em] text-ink transition-colors hover:border-ink focus:outline-none sm:text-[0.86rem]"
-                activeProps={{
-                  className: cn(
-                    "border-ink",
-                    item.onColor === "paper" ? "text-paper" : "text-ink",
-                  ),
-                  style: { background: `var(--${item.color})` },
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {!onSetup &&
+              nav.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="focus-ink shrink-0 border-2 border-transparent px-2 py-1 font-display text-[0.78rem] font-extrabold uppercase tracking-[0.04em] text-ink transition-colors hover:border-ink focus:outline-none sm:text-[0.86rem]"
+                  activeProps={{
+                    className: cn(
+                      "border-ink",
+                      item.onColor === "paper" ? "text-paper" : "text-ink",
+                    ),
+                    style: { background: `var(--${item.color})` },
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            {onSetup && <span className="tag shrink-0 px-2 text-ink-faint">Account setup</span>}
             {configured &&
               (user ? (
                 <PinkHoverButton
