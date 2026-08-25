@@ -7,6 +7,11 @@ import type { ProductRole } from "@/types/apply";
 export function classifyProductRole(title: string): ProductRole | null {
   const t = title.toLowerCase();
 
+  // HR / People Partner titles that list Product orgs they support
+  if (/\bpeople\s+partners?\b/.test(t)) {
+    return null;
+  }
+
   // Explicit engineering titles that mention "product" but are not product roles
   if (isEngineeringRole(t) && !isExplicitProductRole(t)) {
     return null;
@@ -44,6 +49,11 @@ export function classifyProductRole(title: string): ProductRole | null {
     return "Product Operations";
   }
 
+  // Product Support is not a Product Place target role
+  if (/\bproduct\s+support\b/.test(t)) {
+    return null;
+  }
+
   if (
     /\bproduct\s+design/.test(t) ||
     /\bux\s*\/?\s*ui\s+product\b/.test(t) ||
@@ -60,19 +70,37 @@ export function classifyProductRole(title: string): ProductRole | null {
     /\bproduct\s+manager\b/.test(t) ||
     /\bproduct\s+management\b/.test(t) ||
     /\bassociate\s+product\s+manager\b/.test(t) ||
-    /\bapm\b/.test(t) ||
+    isAssociateProductManagerAbbrev(t) ||
     /\bpm\s+intern\b/.test(t) ||
     /\bproduct\s+intern\b/.test(t)
   ) {
     return "Product Management";
   }
 
-  // Ambiguous product-adjacent titles
-  if (/\bproduct\b/.test(t) && !isEngineeringRole(t)) {
+  // Ambiguous product-adjacent titles — exclude clear non-product functions
+  if (/\bproduct\b/.test(t) && !isEngineeringRole(t) && !isNonProductFunction(t)) {
     return "Other / Unspecified Product";
   }
 
   return null;
+}
+
+/**
+ * Bare "APM" only when it plausibly means Associate Product Manager —
+ * not Application Performance Monitoring or engineering product areas.
+ */
+function isAssociateProductManagerAbbrev(t: string): boolean {
+  if (!/\bapm\b/.test(t)) return false;
+  if (/\b(serverless|monitoring|observability|traces|metrics|apm\s+server)\b/.test(t)) {
+    return false;
+  }
+  if (/\b(software|engineering|engineer|sre|devops)\b/.test(t)) return false;
+  return (
+    /\b(associate|intern(?:ship)?|new\s*grad(?:uate)?s?|program|rotational|university|campus|early\s*career)\b/.test(
+      t,
+    ) ||
+    /\bproduct\b/.test(t)
+  );
 }
 
 function isEngineeringRole(t: string): boolean {
@@ -86,7 +114,35 @@ function isEngineeringRole(t: string): boolean {
     /\bmachine\s+learning\b/.test(t) ||
     /\bdata\s+engineer\b/.test(t) ||
     /\bsite\s+reliability\b/.test(t) ||
-    /\bdevops\b/.test(t)
+    /\bdevops\b/.test(t) ||
+    /\bproduct\s+security\s+engineer\b/.test(t) ||
+    /\bproduct\s+engineer\b/.test(t) ||
+    /\bproduct\s+development\s+engineer\b/.test(t) ||
+    /\bproduct\s+review\s+engineer\b/.test(t) ||
+    /\bproduct\s+marketing\s+engineer\b/.test(t)
+  );
+}
+
+/** Sales, legal, recruiting, etc. that mention "product" but are not Product roles. */
+function isNonProductFunction(t: string): boolean {
+  return (
+    /\baccount\s+executive\b/.test(t) ||
+    /\bsales\b/.test(t) ||
+    /\bcounsel\b/.test(t) ||
+    /\battorney\b/.test(t) ||
+    /\brecruiter\b/.test(t) ||
+    /\brecruiting\b/.test(t) ||
+    /\bpeople\s+partners?\b/.test(t) ||
+    /\bhr\b/.test(t) ||
+    /\bfinance\b/.test(t) ||
+    /\baccounting\b/.test(t) ||
+    /\bcommunications?\s+manager\b/.test(t) ||
+    /\bincident\s+response\b/.test(t) ||
+    /\bproduct\s+support\b/.test(t) ||
+    /\bbrand\s+designer\b/.test(t) ||
+    /\bmanufacturing\s+engineer\b/.test(t) ||
+    /\bsoftware\s+engineering\b/.test(t) ||
+    /\bdata\s+scientist\b/.test(t)
   );
 }
 
@@ -95,7 +151,7 @@ function isExplicitProductRole(t: string): boolean {
     /\bproduct\s+manager\b/.test(t) ||
     /\bproduct\s+management\b/.test(t) ||
     /\bproduct\s+design/.test(t) ||
-    /\bapm\b/.test(t) ||
+    isAssociateProductManagerAbbrev(t) ||
     /\bpmm\b/.test(t)
   );
 }

@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalizeText } from "@/lib/apply/normalization/dedupe";
-import { buildDedupeKey } from "@/lib/apply/normalization/dedupe";
+import type { WorkMode } from "@/types/apply";
+import {
+  buildRoleDedupeKey,
+  canonicalizeJobTitle,
+  mergeLocations,
+  normalizeText,
+  preferApplyUrl,
+} from "@/lib/apply/normalization/dedupe";
 import type { NormalizedJob } from "@/lib/apply/types";
 import type { IngestionSummary, JobSourceAdapter, RawSourceJob } from "@/lib/ingestion/types";
 
@@ -10,28 +16,75 @@ import type { IngestionSummary, JobSourceAdapter, RawSourceJob } from "@/lib/ing
  * Do not read service-role env vars from this module.
  */
 
-function toNormalizedFromRaw(raw: RawSourceJob): NormalizedJob | null {
-  const payload = (raw.rawPayload ?? {}) as Partial<NormalizedJob>;
-  if (!payload.productRoleCategory && !payload.dedupeKey) {
-    // Already filtered by vansh adapter; require product role from payload when present
+function longerText(a: string | null, b: string | null): string | null {
+  const left = a?.trim() ?? "";
+  const right = b?.trim() ?? "";
+  if (!left) return right || null;
+  if (!right) return left || null;
+  return right.length > left.length ? right : left;
+}
+
+function mergeWorkModes(a: WorkMode | null, b: WorkMode | null): WorkMode | null {
+  if (a && b && a !== b) {
+    // Distinct explicit modes across locations → treat as hybrid when remote involved
+    if (a === "remote" || b === "remote") return "hybrid";
+    return a;
   }
+  return a ?? b;
+}
+
+function mergeGraduationYears(
+  a: number[] | null,
+  b: number[] | null,
+): number[] | null {
+  const set = new Set<number>([...(a ?? []), ...(b ?? [])]);
+  if (set.size === 0) return null;
+  return [...set].sort((x, y) => x - y);
+}
+
+/** Merge two postings of the same role (typically different locations). */
+export function mergeNormalizedJobs(a: NormalizedJob, b: NormalizedJob): NormalizedJob {
+  return {
+    ...a,
+    title: canonicalizeJobTitle(a.title) || canonicalizeJobTitle(b.title) || a.title,
+    location: mergeLocations(a.location, b.location),
+    workMode: mergeWorkModes(a.workMode, b.workMode),
+    graduationYears: mergeGraduationYears(a.graduationYears, b.graduationYears),
+    employmentType: a.employmentType ?? b.employmentType,
+    postedDate:
+      a.postedDate && b.postedDate
+        ? a.postedDate <= b.postedDate
+          ? a.postedDate
+          : b.postedDate
+        : (a.postedDate ?? b.postedDate),
+    deadline: a.deadline ?? b.deadline,
+    applyUrl: preferApplyUrl(a.applyUrl, b.applyUrl),
+    description: longerText(a.description, b.description),
+    sourceUrl: a.sourceUrl || b.sourceUrl,
+    status: a.status === "closed" && b.status === "closed" ? "closed" : "open",
+    // Keep first external id; source records still store each ATS id separately when present
+    id: a.id || b.id,
+    dedupeKey: a.dedupeKey,
+  };
+}
+
+function toNormalizedFromRaw(
+  raw: RawSourceJob,
+  sourceName: string,
+): NormalizedJob | null {
+  const payload = (raw.rawPayload ?? {}) as Partial<NormalizedJob>;
   const productRoleCategory = payload.productRoleCategory ?? null;
   if (!productRoleCategory) return null;
 
+  const title = canonicalizeJobTitle(raw.title);
   const applyUrl = raw.applyUrl ?? null;
-  const dedupeKey =
-    payload.dedupeKey ??
-    buildDedupeKey({
-      applyUrl,
-      company: raw.company,
-      title: raw.title,
-      location: raw.location ?? null,
-    });
+  // Always role-based — ignore per-location / per-URL keys from adapters
+  const dedupeKey = buildRoleDedupeKey(raw.company, title);
 
   return {
     id: raw.externalId ?? `ingest:${dedupeKey}`,
     company: raw.company,
-    title: raw.title,
+    title,
     productRoleCategory,
     location: raw.location ?? null,
     workMode: payload.workMode ?? null,
@@ -40,7 +93,7 @@ function toNormalizedFromRaw(raw: RawSourceJob): NormalizedJob | null {
     postedDate: raw.postedDate ?? null,
     firstSeenDate: new Date().toISOString().slice(0, 10),
     deadline: payload.deadline ?? null,
-    source: "Summer2027 Internships (GitHub)",
+    source: sourceName,
     sourceUrl: raw.sourceUrl ?? "",
     applyUrl,
     description: raw.description ?? null,
@@ -136,14 +189,19 @@ export async function ingestJobsFromAdapter(
     summary.recordsParsed = rawJobs.length;
 
     const normalized = rawJobs
-      .map(toNormalizedFromRaw)
+      .map((raw) => toNormalizedFromRaw(raw, adapter.sourceName))
       .filter((j): j is NormalizedJob => j != null);
     summary.productJobsFound = normalized.length;
 
     const byKey = new Map<string, NormalizedJob>();
     for (const job of normalized) {
-      if (byKey.has(job.dedupeKey)) summary.duplicatesMerged += 1;
-      else byKey.set(job.dedupeKey, job);
+      const existing = byKey.get(job.dedupeKey);
+      if (existing) {
+        summary.duplicatesMerged += 1;
+        byKey.set(job.dedupeKey, mergeNormalizedJobs(existing, job));
+      } else {
+        byKey.set(job.dedupeKey, job);
+      }
     }
 
     const now = new Date().toISOString();
@@ -153,12 +211,24 @@ export async function ingestJobsFromAdapter(
         const companyId = await upsertCompany(supabase, job.company);
         const { data: existing } = await supabase
           .from("jobs")
-          .select("id, first_seen_at")
+          .select("id, first_seen_at, location, work_mode, description, canonical_apply_url")
           .eq("dedupe_key", job.dedupeKey)
           .maybeSingle();
 
         let jobId: string;
         if (existing?.id) {
+          const mergedLocation = mergeLocations(
+            existing.location as string | null,
+            job.location,
+          );
+          const mergedApply = preferApplyUrl(
+            (existing.canonical_apply_url as string | null) ?? null,
+            job.applyUrl,
+          );
+          const mergedDesc = longerText(
+            (existing.description as string | null) ?? null,
+            job.description,
+          );
           const { error } = await supabase
             .from("jobs")
             .update({
@@ -166,15 +236,18 @@ export async function ingestJobsFromAdapter(
               title: job.title,
               normalized_title: normalizeText(job.title),
               product_role_category: job.productRoleCategory,
-              location: job.location,
-              normalized_location: job.location ? normalizeText(job.location) : null,
-              work_mode: job.workMode,
+              location: mergedLocation,
+              normalized_location: mergedLocation ? normalizeText(mergedLocation) : null,
+              work_mode: mergeWorkModes(
+                (existing.work_mode as WorkMode | null) ?? null,
+                job.workMode,
+              ),
               graduation_years: job.graduationYears,
               employment_type: job.employmentType,
               posted_at: job.postedDate,
               deadline_at: job.deadline,
-              description: job.description,
-              canonical_apply_url: job.applyUrl,
+              description: mergedDesc,
+              canonical_apply_url: mergedApply,
               canonical_source_url: job.sourceUrl || null,
               last_seen_at: now,
               is_active: job.status !== "closed",

@@ -1,20 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { LearnWorkspace, type LearnSearch } from "@/components/learn/LearnWorkspace";
 
 export const Route = createFileRoute("/learn")({
+  validateSearch: (search: Record<string, unknown>): LearnSearch => {
+    const out: LearnSearch = {};
+    if (typeof search["lesson"] === "string" && search["lesson"]) out.lesson = search["lesson"];
+    if (search["view"] === "glossary" || search["view"] === "resources" || search["view"] === "import")
+      out.view = search["view"];
+    return out;
+  },
   head: () => ({
     meta: [
       { title: "Learn — The Product Place" },
       {
         name: "description",
         content:
-          "Curated product management learning: terminology, frameworks and PM specializations, taught in short notebook lessons.",
+          "A concise Product field guide: durable PM concepts in short lessons you can finish, practice, and create with.",
       },
       { property: "og:title", content: "Learn — The Product Place" },
       {
         property: "og:description",
-        content:
-          "Curated PM learning — terminology, frameworks and specializations in short notebook lessons.",
+        content: "Original PM field-guide lessons — foundations, sense, metrics, strategy, and practice links.",
       },
     ],
   }),
@@ -22,20 +28,14 @@ export const Route = createFileRoute("/learn")({
 });
 
 function LearnPage() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   return (
-    <PlaceholderPage
-      kicker="Section 03 · Learn"
-      title="Learn"
-      tone="green"
-      pattern="ruled"
-      blurb="A curriculum you can actually finish. Short lessons, real vocabulary, and the frameworks that come up in rooms where decisions get made."
-      bullets={[
-        "Product management terminology, defined plainly",
-        "Frameworks with worked examples, not just diagrams",
-        "PM specializations: growth, platform, data, hardware",
-        "Progress that remembers where you left off",
-        "External reading, curated rather than dumped",
-      ]}
+    <LearnWorkspace
+      search={search}
+      navigate={({ search: next, replace }) => {
+        void navigate({ search: next, ...(replace ? { replace: true } : {}) });
+      }}
     />
   );
 }

@@ -1,20 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { PracticeWorkspace, type PracticeSearch } from "@/components/practice/PracticeWorkspace";
+import type { PracticeAnswerFormat, PracticeCategory } from "@/lib/learning/types";
+import { PRACTICE_CATEGORY_LABELS, PRACTICE_FORMAT_LABELS } from "@/lib/learning/types";
+
+const CATEGORIES = new Set(Object.keys(PRACTICE_CATEGORY_LABELS));
+const FORMATS = new Set(Object.keys(PRACTICE_FORMAT_LABELS));
 
 export const Route = createFileRoute("/practice")({
+  validateSearch: (search: Record<string, unknown>): PracticeSearch => {
+    const out: PracticeSearch = {};
+    const mode = search["mode"];
+    if (
+      mode === "home" ||
+      mode === "quick" ||
+      mode === "bank" ||
+      mode === "drill" ||
+      mode === "mock"
+    ) {
+      out.mode = mode;
+    }
+    if (typeof search["q"] === "string" && search["q"]) out.q = search["q"];
+    const cat = search["category"];
+    if (cat === "surprise" || cat === "all" || (typeof cat === "string" && CATEGORIES.has(cat))) {
+      out.category = cat as PracticeCategory | "surprise" | "all";
+    }
+    const fmt = search["format"];
+    if (fmt === "any" || (typeof fmt === "string" && FORMATS.has(fmt))) {
+      out.format = fmt as PracticeAnswerFormat | "any";
+    }
+    return out;
+  },
   head: () => ({
     meta: [
       { title: "Practice — The Product Place" },
       {
         name: "description",
         content:
-          "Practice PM interviews across product sense, execution and metrics, behavioral questions and case studies.",
+          "PM thinking gym: write/speak, multiple choice, checkbox drills, and technical / behavioral mocks.",
       },
       { property: "og:title", content: "Practice — The Product Place" },
       {
         property: "og:description",
-        content:
-          "Product sense, execution and metrics, behavioral and case study interview practice for student PMs.",
+        content: "Original practice prompts with graded feedback — tap or type.",
       },
     ],
   }),
@@ -22,20 +49,14 @@ export const Route = createFileRoute("/practice")({
 });
 
 function PracticePage() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   return (
-    <PlaceholderPage
-      kicker="Section 05 · Practice"
-      title="Practice"
-      tone="yellow"
-      pattern="grid"
-      blurb="Four rooms, four kinds of question. Say the answer out loud, write the structure down, and notice which one you keep avoiding."
-      bullets={[
-        "Product Sense — design and improve prompts",
-        "Execution & Metrics — diagnose the number that moved",
-        "Behavioral — stories with a decision inside them",
-        "Case Studies — longer walkthroughs, end to end",
-        "Your own notes kept beside each prompt",
-      ]}
+    <PracticeWorkspace
+      search={search}
+      navigate={({ search: next, replace }) => {
+        void navigate({ search: next, ...(replace ? { replace: true } : {}) });
+      }}
     />
   );
 }

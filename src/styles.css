@@ -54,6 +54,8 @@
   --color-green: var(--green);
   --color-pink: var(--pink);
   --color-yellow: var(--yellow);
+  --color-yellow-ink: var(--yellow-ink);
+  --color-yellow-ink-deep: var(--yellow-ink-deep);
   --color-purple: var(--purple);
 
   /* light washes — used sparingly */
@@ -85,6 +87,9 @@
   --green: oklch(0.73 0.18 152);
   --pink: oklch(0.68 0.215 356);
   --yellow: oklch(0.9 0.11 95);
+  /* Warm readable yellow for titles/labels on paper (not muddy olive). */
+  --yellow-ink: oklch(0.84 0.14 92);
+  --yellow-ink-deep: oklch(0.8 0.15 92);
   --purple: oklch(0.52 0.212 295);
 
   --blue-wash: oklch(0.945 0.038 254);

@@ -186,11 +186,11 @@ function PracticeGlimpse() {
         <Reveal from="down" distance={30}>
           <Tab color="yellow">Section 07 — Practice</Tab>
           <h3 className="mt-4 font-display text-[clamp(2.2rem,6vw,4rem)] font-black leading-[0.82]">
-            <span style={{ color: "oklch(0.78 0.16 92)" }}>PREPARE</span>{" "}
+            <span className="text-yellow-ink">PREPARE</span>{" "}
             <span className="text-ink">FOR</span>
             <br />
             <span className="text-ink">THE</span>{" "}
-            <span style={{ color: "oklch(0.78 0.16 92)" }}>INTERVIEW</span>
+            <span className="text-yellow-ink">INTERVIEW</span>
           </h3>
           <p className="mt-5 text-[1rem] leading-relaxed text-ink-soft">
             Walk through cases, behaviorals, and technicals.
@@ -229,8 +229,7 @@ function PracticeGlimpse() {
             </p>
             <Link
               to="/practice"
-              className="focus-ink swipe-underline mt-6 inline-block font-display text-[1rem] font-extrabold uppercase focus:outline-none"
-              style={{ color: "oklch(0.78 0.16 92)" }}
+              className="focus-ink swipe-underline mt-6 inline-block font-display text-[1rem] font-extrabold uppercase text-yellow-ink focus:outline-none"
             >
               Answer it out loud
             </Link>

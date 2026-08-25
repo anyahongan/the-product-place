@@ -1,7 +1,7 @@
 import type { WorkMode } from "@/types/apply";
 import type { NormalizedJob } from "@/lib/apply/types";
 import { classifyProductRole } from "@/lib/apply/normalization/classifyProductRole";
-import { buildDedupeKey } from "@/lib/apply/normalization/dedupe";
+import { buildRoleDedupeKey, canonicalizeJobTitle } from "@/lib/apply/normalization/dedupe";
 
 export type RawInternshipRow = {
   company: string;
@@ -23,24 +23,21 @@ export function normalizeInternshipRow(
   const productRoleCategory = classifyProductRole(row.title);
   if (!productRoleCategory) return null;
 
+  const title = cleanTitle(row.title);
+  const canonicalTitle = canonicalizeJobTitle(title);
   const location = cleanLocation(row.locationRaw);
   const workMode = inferWorkMode(row.locationRaw);
   const postedDate = parsePostedDate(row.datePostedRaw, nowIso);
   const applyUrl = row.closed ? null : row.applyUrl;
 
-  const dedupeKey = buildDedupeKey({
-    applyUrl,
-    company: row.company,
-    title: row.title,
-    location,
-  });
+  const dedupeKey = buildRoleDedupeKey(row.company, canonicalTitle);
 
   const id = `vansh2027:${hashKey(dedupeKey)}`;
 
   return {
     id,
     company: row.company.trim(),
-    title: cleanTitle(row.title),
+    title: canonicalTitle,
     productRoleCategory,
     location,
     workMode,

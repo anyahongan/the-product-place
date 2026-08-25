@@ -10,7 +10,12 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "verify:matching": "npx --yes tsx --tsconfig tsconfig.json scripts/verify-matching.ts"
+    "verify:matching": "npx --yes tsx --tsconfig tsconfig.json scripts/verify-matching.ts",
+    "verify:ingestion": "npx --yes tsx --tsconfig tsconfig.json scripts/verify-ingestion.ts",
+    "verify:learning": "npx --yes tsx --tsconfig tsconfig.json scripts/verify-learning.ts",
+    "ingest:catalog": "npx --yes tsx --tsconfig tsconfig.json scripts/run-catalog-ingest.ts",
+    "ingest:dry-run": "npx --yes tsx --tsconfig tsconfig.json scripts/dry-run-catalog-sources.ts",
+    "ingest:consolidate": "npx --yes tsx --tsconfig tsconfig.json scripts/consolidate-role-dedupe.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
