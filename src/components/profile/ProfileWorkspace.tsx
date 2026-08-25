@@ -25,6 +25,7 @@ import {
   uploadMasterResume,
 } from "@/lib/profile/resumeRepository";
 import { moveExperience } from "@/lib/profile/experienceRepository";
+import { notifyProfileUpdated } from "@/lib/profile/profileEvents";
 import {
   DEFAULT_ANSWER_PROMPTS,
   EXPERIENCE_TYPE_LABELS,
@@ -46,6 +47,8 @@ function fieldClass() {
   return "mt-1 w-full border-2 border-ink bg-paper px-3 py-2 font-body text-[0.95rem] text-ink outline-none focus:bg-yellow-wash";
 }
 
+type SectionTone = "paper" | "blue" | "pink" | "yellow" | "green" | "purple";
+
 function Section({
   eyebrow,
   title,
@@ -56,12 +59,13 @@ function Section({
   eyebrow: string;
   title: string;
   hint?: string;
-  tone?: "paper" | "blue" | "pink" | "yellow" | "green";
+  tone?: SectionTone;
   children: ReactNode;
 }) {
+  const tapeColor = tone === "paper" ? "pink" : tone;
   return (
     <Sheet tone={tone} soft={tone !== "paper"} shadow="hard-sm" className="relative px-5 py-5 sm:px-6">
-      <Tape className="-top-3 left-6" color="pink" angle={-5} width={92} height={20} />
+      <Tape className="-top-3 left-6" color={tapeColor} angle={-5} width={92} height={20} />
       <p className="tag text-ink-faint">{eyebrow}</p>
       <h2 className="mt-1 font-display text-[1.55rem] font-black uppercase leading-none">{title}</h2>
       {hint ? <p className="mt-2 max-w-2xl text-[0.92rem] text-ink-soft">{hint}</p> : null}
@@ -70,13 +74,31 @@ function Section({
   );
 }
 
+const CHIP_ACTIVE: Record<Exclude<SectionTone, "paper">, string> = {
+  blue: "bg-blue text-paper",
+  yellow: "bg-yellow text-ink",
+  pink: "bg-pink text-paper",
+  green: "bg-green text-ink",
+  purple: "bg-purple text-paper",
+};
+
+const CHIP_HOVER: Record<Exclude<SectionTone, "paper">, string> = {
+  blue: "hover:bg-blue-wash",
+  yellow: "hover:bg-yellow-wash",
+  pink: "hover:bg-pink-wash",
+  green: "hover:bg-green-wash",
+  purple: "hover:bg-purple-wash",
+};
+
 function ToggleChip({
   active,
   onClick,
+  tone = "pink",
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  tone?: Exclude<SectionTone, "paper">;
   children: ReactNode;
 }) {
   return (
@@ -85,7 +107,7 @@ function ToggleChip({
       onClick={onClick}
       className={cn(
         "focus-ink border-2 border-ink px-3 py-2 font-display text-xs font-black uppercase outline-none",
-        active ? "bg-ink text-paper" : "bg-paper hover:bg-pink-wash",
+        active ? CHIP_ACTIVE[tone] : cn("bg-paper text-ink", CHIP_HOVER[tone]),
       )}
     >
       {children}
@@ -109,7 +131,7 @@ function completeness(bundle: UserProfileBundle) {
 }
 
 export function ProfileWorkspace() {
-  const { configured, ready, user } = useAuth();
+  const { configured, ready, user, signOut } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [bundle, setBundle] = useState<UserProfileBundle | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -270,6 +292,7 @@ export function ProfileWorkspace() {
         currentLocation: next.currentLocation,
       });
       setBasicsState("saved");
+      notifyProfileUpdated();
     } catch (e) {
       setBasicsState("error");
       setErrorMsg(e instanceof Error ? e.message : "Error saving");
@@ -313,6 +336,7 @@ export function ProfileWorkspace() {
       setTargets({ ...targets, locations });
       setLocationsDraft(locations.map((l) => l.label).join(", "));
       setTargetsState("saved");
+      notifyProfileUpdated();
     } catch (e) {
       setTargetsState("error");
       setErrorMsg(e instanceof Error ? e.message : "Error saving");
@@ -397,8 +421,8 @@ export function ProfileWorkspace() {
           </p>
         </header>
 
-        <Sheet tone="yellow" soft shadow="hard-sm" className="relative px-5 py-5">
-          <Tape className="-top-3 right-8" color="blue" angle={6} width={88} height={20} />
+        <Sheet tone="purple" soft shadow="hard-sm" className="relative px-5 py-5">
+          <Tape className="-top-3 right-8" color="purple" angle={6} width={88} height={20} />
           <p className="tag text-ink-faint">Master profile summary</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -457,6 +481,7 @@ export function ProfileWorkspace() {
           eyebrow="Basics"
           title="Who you are"
           hint="Only store what you enter. Nothing is prefilled from mock data."
+          tone="blue"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
@@ -517,7 +542,7 @@ export function ProfileWorkspace() {
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <PinkHoverButton variant="ink" onClick={() => void saveBasics()}>
+            <PinkHoverButton variant="ink" hoverAccent="blue" onClick={() => void saveBasics()}>
               Save basics
             </PinkHoverButton>
             <SaveStatus state={basicsState} error={errorMsg} />
@@ -525,10 +550,10 @@ export function ProfileWorkspace() {
         </Section>
 
         <Section
-          eyebrow="Targets"
+          eyebrow="Target roles"
           title="What you want"
-          hint="Preferences only — matching comes later."
-          tone="blue"
+          hint="Same product-role categories as Account Setup."
+          tone="yellow"
         >
           <div>
             <p className="tag text-ink-faint">Target product roles</p>
@@ -536,6 +561,7 @@ export function ProfileWorkspace() {
               {TARGET_PRODUCT_ROLES.map((role) => (
                 <ToggleChip
                   key={role}
+                  tone="yellow"
                   active={targets.roles.includes(role)}
                   onClick={() => toggleRole(role)}
                 >
@@ -544,6 +570,20 @@ export function ProfileWorkspace() {
               ))}
             </div>
           </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <PinkHoverButton variant="ink" hoverAccent="yellow" onClick={() => void saveTargets()}>
+              Save roles
+            </PinkHoverButton>
+            <SaveStatus state={targetsState} error={errorMsg} />
+          </div>
+        </Section>
+
+        <Section
+          eyebrow="Work preferences"
+          title="Where / how you work"
+          hint="Employment type, work mode, and preferred locations — same as setup."
+          tone="pink"
+        >
           <label className="block">
             <span className="tag text-ink-faint">Preferred locations (comma-separated)</span>
             <input
@@ -565,6 +605,7 @@ export function ProfileWorkspace() {
               ).map(([mode, label]) => (
                 <ToggleChip
                   key={mode}
+                  tone="pink"
                   active={targets.workModes.includes(mode)}
                   onClick={() => toggleMode(mode)}
                 >
@@ -585,6 +626,7 @@ export function ProfileWorkspace() {
               ).map(([t, label]) => (
                 <ToggleChip
                   key={t}
+                  tone="pink"
                   active={targets.employmentTypes.includes(t)}
                   onClick={() => toggleEmp(t)}
                 >
@@ -594,8 +636,8 @@ export function ProfileWorkspace() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <PinkHoverButton variant="ink" onClick={() => void saveTargets()}>
-              Save targets
+            <PinkHoverButton variant="ink" hoverAccent="pink" onClick={() => void saveTargets()}>
+              Save preferences
             </PinkHoverButton>
             <SaveStatus state={targetsState} error={errorMsg} />
           </div>
@@ -605,7 +647,7 @@ export function ProfileWorkspace() {
           eyebrow="Application details"
           title="Forms & contact"
           hint="Stored for your own application workflow. Leave blank if you prefer not to answer."
-          tone="green"
+          tone="purple"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
@@ -688,6 +730,7 @@ export function ProfileWorkspace() {
                 ).map(([val, label]) => (
                   <ToggleChip
                     key={label}
+                    tone="purple"
                     active={details.requiresSponsorship === val}
                     onClick={() => setDetails({ ...details, requiresSponsorship: val })}
                   >
@@ -698,7 +741,7 @@ export function ProfileWorkspace() {
             </fieldset>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <PinkHoverButton variant="ink" onClick={() => void saveDetails()}>
+            <PinkHoverButton variant="ink" hoverAccent="purple" onClick={() => void saveDetails()}>
               Save application details
             </PinkHoverButton>
             <SaveStatus state={detailsState} error={errorMsg} />
@@ -797,6 +840,7 @@ export function ProfileWorkspace() {
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <PinkHoverButton
                 variant="ink"
+                hoverAccent="pink"
                 onClick={() => {
                   if (!newAnswerLabel.trim()) return;
                   setAnswerState("saving");
@@ -829,6 +873,7 @@ export function ProfileWorkspace() {
           eyebrow="Master resume"
           title="Baseline document"
           hint="Private PDF upload. The Experience Library below stays separate — editing facts does not change this file."
+          tone="green"
         >
           {!masterResume ? (
             <div className="border-2 border-dashed border-ink/50 bg-paper px-4 py-8">
@@ -855,7 +900,7 @@ export function ProfileWorkspace() {
                 Uploaded {new Date(masterResume.uploadedAt).toLocaleString()}
               </p>
               <div className="flex flex-wrap gap-2">
-                <PinkHoverButton variant="ink" onClick={() => void openResume()}>
+                <PinkHoverButton variant="ink" hoverAccent="green" onClick={() => void openResume()}>
                   View / download
                 </PinkHoverButton>
                 <label className="inline-block">
@@ -889,7 +934,7 @@ export function ProfileWorkspace() {
                 across applications.
               </p>
               <div className="mt-4">
-                <PinkHoverButton variant="ink" onClick={() => setEditingExperienceId("new")}>
+                <PinkHoverButton variant="ink" hoverAccent="yellow" onClick={() => setEditingExperienceId("new")}>
                   Add experience
                 </PinkHoverButton>
               </div>
@@ -962,7 +1007,7 @@ export function ProfileWorkspace() {
                 </Sheet>
               ))}
               {editingExperienceId === null && (
-                <PinkHoverButton variant="ink" onClick={() => setEditingExperienceId("new")}>
+                <PinkHoverButton variant="ink" hoverAccent="yellow" onClick={() => setEditingExperienceId("new")}>
                   Add experience
                 </PinkHoverButton>
               )}
@@ -981,12 +1026,13 @@ export function ProfileWorkspace() {
               onSaved={(list) => {
                 setExperiences(list);
                 setEditingExperienceId(null);
+                notifyProfileUpdated();
               }}
             />
           )}
         </Section>
 
-        <Section eyebrow="Links" title="Quick links">
+        <Section eyebrow="Links" title="Quick links" tone="blue">
           <ul className="space-y-2 text-[0.95rem]">
             {[
               ["LinkedIn", details.linkedinUrl],
@@ -1011,6 +1057,17 @@ export function ProfileWorkspace() {
               </li>
             ))}
           </ul>
+        </Section>
+
+        <Section
+          eyebrow="Account"
+          title="Sign out"
+          hint={user.email ? `Signed in as ${user.email}` : "End this session on this device."}
+          tone="pink"
+        >
+          <PinkHoverButton variant="ink" hoverAccent="pink" onClick={() => void signOut()}>
+            Sign out
+          </PinkHoverButton>
         </Section>
       </div>
     </main>

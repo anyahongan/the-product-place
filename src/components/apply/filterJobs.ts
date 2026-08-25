@@ -76,7 +76,10 @@ export function filterAndSortJobs(
       const am = a.matchPercent ?? -1;
       const bm = b.matchPercent ?? -1;
       if (bm !== am) return bm - am;
-      return (b.postedDate ?? "").localeCompare(a.postedDate ?? "");
+      // Fallback when scores are null/tied: newer first, then stable id
+      const dateCmp = (b.postedDate ?? "").localeCompare(a.postedDate ?? "");
+      if (dateCmp !== 0) return dateCmp;
+      return a.id.localeCompare(b.id);
     }
     if (filters.sort === "company") {
       return a.company.localeCompare(b.company);

@@ -1,4 +1,5 @@
 import type { EmploymentType, ProductRole, ToneName, WorkMode } from "@/types/apply";
+import type { JobMatchResult } from "@/lib/matching/matchTypes";
 
 /** Canonical external opportunity — separate from Application */
 export type NormalizedJob = {
@@ -71,7 +72,10 @@ export type JobListingView = {
   postedDate: string | null;
   deadline: string | null;
   status: "open" | "saved" | "queued" | "closed" | "unknown";
+  /** Internal relevance score for Best Match sort; null when not personalized */
   matchPercent: number | null;
+  /** Explainable match result (coverage-aware display lives here) */
+  matchResult?: JobMatchResult | null;
   source: string;
   sourceUrl: string;
   applicationUrl: string;

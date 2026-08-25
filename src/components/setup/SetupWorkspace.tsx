@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { Sheet, Tape, Tab, Clip } from "@/components/paper/Paper";
-import { PinkHoverButton } from "@/components/network/PinkHoverButton";
+import { PinkHoverButton, type HoverAccent } from "@/components/network/PinkHoverButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,87 @@ import type { EmploymentType, WorkMode } from "@/types/apply";
 
 type StepId = "welcome" | "about" | "roles" | "prefs" | "resume" | "ready";
 
+type StepTone = "blue" | "yellow" | "pink" | "green" | "purple";
+
+/** One established site color per step — tape, sheet wash, chips, button hovers. */
+const STEP_THEME: Record<
+  StepId,
+  {
+    tone: StepTone;
+    accent: HoverAccent;
+    titleClass: string;
+    progressClass: string;
+    summaryWash: string;
+    pattern: "none" | "grid" | "ruled";
+  }
+> = {
+  welcome: {
+    tone: "blue",
+    accent: "blue",
+    titleClass: "text-blue",
+    progressClass: "text-blue",
+    summaryWash: "bg-blue-wash",
+    pattern: "none",
+  },
+  about: {
+    tone: "blue",
+    accent: "blue",
+    titleClass: "text-blue",
+    progressClass: "text-blue",
+    summaryWash: "bg-blue-wash",
+    pattern: "grid",
+  },
+  roles: {
+    tone: "yellow",
+    accent: "yellow",
+    titleClass: "text-ink",
+    progressClass: "text-ink",
+    summaryWash: "bg-yellow-wash",
+    pattern: "none",
+  },
+  prefs: {
+    tone: "pink",
+    accent: "pink",
+    titleClass: "text-pink",
+    progressClass: "text-pink",
+    summaryWash: "bg-pink-wash",
+    pattern: "none",
+  },
+  resume: {
+    tone: "green",
+    accent: "green",
+    titleClass: "text-ink",
+    progressClass: "text-ink",
+    summaryWash: "bg-green-wash",
+    pattern: "ruled",
+  },
+  ready: {
+    tone: "purple",
+    accent: "purple",
+    titleClass: "text-purple",
+    progressClass: "text-purple",
+    summaryWash: "bg-purple-wash",
+    pattern: "none",
+  },
+};
+
 const CONTENT_STEPS: StepId[] = ["about", "roles", "prefs", "resume", "ready"];
+
+const CHIP_ACTIVE: Record<StepTone, string> = {
+  blue: "bg-blue text-paper",
+  yellow: "bg-yellow text-ink",
+  pink: "bg-pink text-paper",
+  green: "bg-green text-ink",
+  purple: "bg-purple text-paper",
+};
+
+const CHIP_HOVER: Record<StepTone, string> = {
+  blue: "hover:bg-blue-wash",
+  yellow: "hover:bg-yellow-wash",
+  pink: "hover:bg-pink-wash",
+  green: "hover:bg-green-wash",
+  purple: "hover:bg-purple-wash",
+};
 
 const WORK_MODES: { id: WorkMode; label: string }[] = [
   { id: "remote", label: "Remote" },
@@ -85,10 +165,12 @@ function inferStep(
 function ToggleChip({
   active,
   onClick,
+  tone,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  tone: StepTone;
   children: string;
 }) {
   return (
@@ -98,7 +180,7 @@ function ToggleChip({
       onClick={onClick}
       className={cn(
         "focus-ink border-2 border-ink px-3 py-2 text-left font-display text-[0.78rem] font-black uppercase outline-none sm:text-xs",
-        active ? "bg-blue text-paper" : "bg-paper text-ink hover:bg-yellow-wash",
+        active ? CHIP_ACTIVE[tone] : cn("bg-paper text-ink", CHIP_HOVER[tone]),
       )}
     >
       {children}
@@ -107,7 +189,7 @@ function ToggleChip({
 }
 
 function fieldClass() {
-  return "mt-1.5 w-full border-2 border-ink bg-paper px-3 py-2.5 text-[0.98rem] outline-none focus:bg-yellow-wash";
+  return "mt-1.5 w-full border-2 border-ink bg-paper px-3 py-2.5 text-[0.98rem] outline-none";
 }
 
 export function SetupWorkspace() {
@@ -129,6 +211,7 @@ export function SetupWorkspace() {
 
   const progressIndex = CONTENT_STEPS.indexOf(step);
   const showProgress = progressIndex >= 0;
+  const theme = STEP_THEME[step];
 
   const hydrate = useCallback(async (userId: string) => {
     const bundle = await loadProfileBundle(userId);
@@ -357,7 +440,7 @@ export function SetupWorkspace() {
 
       <div className="mx-auto max-w-3xl">
         {showProgress && (
-          <p className="tag mb-4 text-ink-soft" aria-live="polite">
+          <p className={cn("tag mb-4", theme.progressClass)} aria-live="polite">
             {String(progressIndex + 1).padStart(2, "0")} / 05
           </p>
         )}
@@ -369,8 +452,13 @@ export function SetupWorkspace() {
           transition={{ duration: 0.28, ease: [0.2, 0.9, 0.2, 1] }}
         >
           {step === "welcome" && (
-            <Sheet tone="paper" shadow="hard" className="relative px-6 py-10 sm:px-10">
-              <Tape className="-top-3 left-8" color="pink" angle={-5} width={130} height={28} />
+            <Sheet
+              tone="blue"
+              soft
+              shadow="hard"
+              className="relative px-6 py-10 sm:px-10"
+            >
+              <Tape className="-top-3 left-8" color="blue" angle={-5} width={130} height={28} />
               <Clip className="absolute -top-4 right-10" color="blue" size={48} angle={8} />
               <Tab color="blue">Account setup</Tab>
               <h1 className="mt-5 font-display text-[clamp(2.4rem,9vw,4.5rem)] font-black uppercase leading-[0.8]">
@@ -384,7 +472,7 @@ export function SetupWorkspace() {
               <div className="mt-8">
                 <PinkHoverButton
                   variant="ink"
-                  hoverAccent="yellow"
+                  hoverAccent="blue"
                   disabled={busy}
                   onClick={() => setStep("about")}
                 >
@@ -460,6 +548,7 @@ export function SetupWorkspace() {
               </div>
               <NavRow
                 busy={busy}
+                accent="blue"
                 onBack={goBack}
                 onContinue={() => void goNext()}
                 continueLabel="Continue"
@@ -468,7 +557,12 @@ export function SetupWorkspace() {
           )}
 
           {step === "roles" && (
-            <Sheet tone="paper" shadow="hard" className="relative px-6 py-8 sm:px-9">
+            <Sheet
+              tone="yellow"
+              soft
+              shadow="hard"
+              className="relative px-6 py-8 sm:px-9"
+            >
               <Tape className="-top-3 right-12" color="yellow" angle={6} width={110} height={26} />
               <h2 className="font-display text-[clamp(1.8rem,6vw,2.8rem)] font-black uppercase leading-[0.88]">
                 What are you looking for?
@@ -482,6 +576,7 @@ export function SetupWorkspace() {
                 {TARGET_PRODUCT_ROLES.map((role) => (
                   <ToggleChip
                     key={role}
+                    tone="yellow"
                     active={targets.roles.includes(role)}
                     onClick={() =>
                       setTargets((prev) => {
@@ -499,6 +594,7 @@ export function SetupWorkspace() {
               </div>
               <NavRow
                 busy={busy}
+                accent="yellow"
                 onBack={goBack}
                 onContinue={() => void goNext()}
                 continueLabel="Continue"
@@ -507,7 +603,7 @@ export function SetupWorkspace() {
           )}
 
           {step === "prefs" && (
-            <Sheet tone="yellow" soft shadow="hard" className="relative px-6 py-8 sm:px-9">
+            <Sheet tone="pink" soft shadow="hard" className="relative px-6 py-8 sm:px-9">
               <Tape className="-top-3 left-8" color="pink" angle={-6} width={100} height={24} />
               <h2 className="font-display text-[clamp(1.8rem,6vw,2.6rem)] font-black uppercase leading-[0.88]">
                 Where / how do you want to work?
@@ -519,6 +615,7 @@ export function SetupWorkspace() {
                     {EMPLOYMENT_TYPES.map((t) => (
                       <ToggleChip
                         key={t.id}
+                        tone="pink"
                         active={targets.employmentTypes.includes(t.id)}
                         onClick={() =>
                           setTargets((prev) => {
@@ -543,6 +640,7 @@ export function SetupWorkspace() {
                     {WORK_MODES.map((m) => (
                       <ToggleChip
                         key={m.id}
+                        tone="pink"
                         active={targets.workModes.includes(m.id)}
                         onClick={() =>
                           setTargets((prev) => {
@@ -575,6 +673,7 @@ export function SetupWorkspace() {
               </div>
               <NavRow
                 busy={busy}
+                accent="pink"
                 onBack={goBack}
                 onContinue={() => void goNext()}
                 continueLabel="Continue"
@@ -624,6 +723,7 @@ export function SetupWorkspace() {
               <div className="mt-6 flex flex-wrap gap-2">
                 <PinkHoverButton
                   variant="ink"
+                  hoverAccent="green"
                   disabled={busy}
                   onClick={() => fileRef.current?.click()}
                 >
@@ -631,7 +731,7 @@ export function SetupWorkspace() {
                 </PinkHoverButton>
                 <PinkHoverButton
                   variant="paper"
-                  hoverAccent="yellow"
+                  hoverAccent="green"
                   disabled={busy}
                   onClick={() => {
                     setError(null);
@@ -643,6 +743,7 @@ export function SetupWorkspace() {
               </div>
               <NavRow
                 busy={busy}
+                accent="green"
                 onBack={goBack}
                 onContinue={() => void goNext()}
                 continueLabel="Continue"
@@ -651,9 +752,14 @@ export function SetupWorkspace() {
           )}
 
           {step === "ready" && (
-            <Sheet tone="paper" shadow="hard" className="relative px-6 py-10 sm:px-10">
-              <Tape className="-top-3 left-10" color="blue" angle={-4} width={120} height={26} />
-              <Clip className="absolute -top-5 right-12" color="pink" size={52} angle={-8} />
+            <Sheet
+              tone="purple"
+              soft
+              shadow="hard"
+              className="relative px-6 py-10 sm:px-10"
+            >
+              <Tape className="-top-3 left-10" color="purple" angle={-4} width={120} height={26} />
+              <Clip className="absolute -top-5 right-12" color="purple" size={52} angle={-8} />
               <h2 className="font-display text-[clamp(2rem,7vw,3.4rem)] font-black uppercase leading-[0.85]">
                 You&apos;re set.
               </h2>
@@ -669,7 +775,7 @@ export function SetupWorkspace() {
                   summaryBits.map((bit) => (
                     <li
                       key={bit}
-                      className="border-2 border-ink bg-blue-wash px-3 py-2 font-display text-[0.95rem] font-extrabold uppercase leading-snug"
+                      className="border-2 border-ink bg-paper px-3 py-2 font-display text-[0.95rem] font-extrabold uppercase leading-snug"
                     >
                       {bit}
                     </li>
@@ -677,12 +783,17 @@ export function SetupWorkspace() {
                 )}
               </ul>
               <div className="mt-8 flex flex-wrap gap-2">
-                <PinkHoverButton variant="paper" disabled={busy} onClick={goBack}>
+                <PinkHoverButton
+                  variant="paper"
+                  hoverAccent="purple"
+                  disabled={busy}
+                  onClick={goBack}
+                >
                   Back
                 </PinkHoverButton>
                 <PinkHoverButton
                   variant="ink"
-                  hoverAccent="yellow"
+                  hoverAccent="purple"
                   disabled={busy}
                   onClick={() => void finish()}
                 >
@@ -705,21 +816,28 @@ export function SetupWorkspace() {
 
 function NavRow({
   busy,
+  accent,
   onBack,
   onContinue,
   continueLabel,
 }: {
   busy: boolean;
+  accent: HoverAccent;
   onBack: () => void;
   onContinue: () => void;
   continueLabel: string;
 }) {
   return (
     <div className="mt-8 flex flex-wrap gap-2">
-      <PinkHoverButton variant="paper" disabled={busy} onClick={onBack}>
+      <PinkHoverButton variant="paper" hoverAccent={accent} disabled={busy} onClick={onBack}>
         Back
       </PinkHoverButton>
-      <PinkHoverButton variant="ink" hoverAccent="yellow" disabled={busy} onClick={onContinue}>
+      <PinkHoverButton
+        variant="ink"
+        hoverAccent={accent}
+        disabled={busy}
+        onClick={onContinue}
+      >
         {continueLabel}
       </PinkHoverButton>
     </div>

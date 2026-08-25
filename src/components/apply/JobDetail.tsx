@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
 import { EMPLOYMENT_TYPE_LABELS, formatShortDate, WORK_MODE_LABELS } from "@/data/apply";
+import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
 import { modeCta } from "@/components/apply/modeCta";
 import { cn } from "@/lib/utils";
 import type { ApplicationMode } from "@/types/apply";
@@ -85,6 +86,27 @@ export function JobDetail({
                 {job.company}
               </h2>
               <p className="mt-3 text-[1.05rem] text-ink-soft">{job.title}</p>
+
+              {job.matchResult?.personalized ? (
+                <div className="mt-4 flex items-start gap-3">
+                  <div
+                    className="flex w-max flex-col border-2 border-ink px-3 py-2"
+                    style={{ background: `var(--${job.tone})` }}
+                  >
+                    <MatchBadge
+                      match={job.matchResult}
+                      toneLight={job.tone === "yellow" || job.tone === "green"}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-sm font-black uppercase">{job.matchResult.tier}</p>
+                    {!job.matchResult.showNumeric && !job.matchResult.hardMismatch ? (
+                      <p className="tag mt-1 text-ink-faint">Limited job data — score is directional</p>
+                    ) : null}
+                    <WhyThisMatch match={job.matchResult} />
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="tag border-2 border-ink bg-blue px-2 py-1 text-paper">

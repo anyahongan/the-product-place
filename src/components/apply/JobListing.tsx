@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Sheet, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { formatShortDate, EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from "@/data/apply";
+import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
 import { modeCta } from "@/components/apply/modeCta";
 import { cn } from "@/lib/utils";
 import type { ApplicationMode } from "@/types/apply";
@@ -62,24 +63,7 @@ export function JobListing({
             className="flex w-max flex-col border-2 border-ink px-3 py-2"
             style={{ background: `var(--${job.tone})` }}
           >
-            <span className={cn("tag", light ? "text-ink" : "text-paper")}>
-              {job.matchPercent != null ? "Match" : "Role"}
-            </span>
-            <span
-              className={cn(
-                "font-display text-[1.35rem] font-black leading-none tracking-[-0.04em]",
-                light ? "text-ink" : "text-paper",
-              )}
-            >
-              {job.matchPercent != null ? (
-                <>
-                  {job.matchPercent}
-                  <span className="text-[1rem]">%</span>
-                </>
-              ) : (
-                <span className="text-[0.95rem] uppercase">Open</span>
-              )}
-            </span>
+            <MatchBadge match={job.matchResult} toneLight={light} />
           </div>
 
           <div className="min-w-0">
@@ -104,6 +88,8 @@ export function JobListing({
                 ? ` · ’${job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}`
                 : " · Grad year unknown"}
             </p>
+
+            <WhyThisMatch match={job.matchResult} />
 
             <div className="mt-4 flex flex-wrap gap-2">
               <button

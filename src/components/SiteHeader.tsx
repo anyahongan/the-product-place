@@ -8,7 +8,6 @@ import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 const nav = [
   { to: "/apply", label: "Apply", color: "blue", onColor: "paper" },
   { to: "/network", label: "Network", color: "pink", onColor: "ink" },
-  { to: "/profile", label: "Profile", color: "yellow", onColor: "ink" },
   { to: "/learn", label: "Learn", color: "green", onColor: "ink" },
   { to: "/create", label: "Create", color: "purple", onColor: "paper" },
   { to: "/practice", label: "Practice", color: "yellow", onColor: "ink" },
@@ -17,9 +16,11 @@ const nav = [
 export function SiteHeader() {
   const [condensed, setCondensed] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const { configured, user, signOut, migrationStatus, migrationMessage } = useAuth();
+  const { configured, user, migrationStatus, migrationMessage } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onSetup = pathname === "/setup";
+  const onProfile = pathname === "/profile";
+  const initial = (user?.email?.trim()?.[0] ?? "P").toUpperCase();
 
   useEffect(() => {
     const onScroll = () => setCondensed(window.scrollY > 24);
@@ -36,7 +37,21 @@ export function SiteHeader() {
           condensed ? "py-1.5" : "py-3",
         )}
       >
-        <div className="mx-auto flex max-w-[1320px] items-center gap-4 px-5 sm:px-8">
+        <div className="mx-auto flex max-w-[1320px] items-center gap-3 px-5 sm:gap-4 sm:px-8">
+          {!onSetup && configured && user ? (
+            <Link
+              to="/profile"
+              title={migrationMessage ?? user.email ?? "Profile"}
+              aria-label="Profile"
+              className={cn(
+                "focus-ink flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-ink font-display text-[0.7rem] font-black uppercase outline-none transition-transform hover:-translate-y-[1px] sm:size-9 sm:text-[0.75rem]",
+                onProfile ? "bg-yellow text-ink" : "bg-paper text-ink hover:bg-yellow-wash",
+              )}
+            >
+              {initial}
+            </Link>
+          ) : null}
+
           {onSetup ? (
             <span className="shrink-0 border-2 border-ink bg-ink px-2.5 py-1 font-display text-[0.9rem] font-black uppercase tracking-[-0.02em] text-paper sm:text-[1rem]">
               The Product Place
@@ -69,24 +84,15 @@ export function SiteHeader() {
                 </Link>
               ))}
             {onSetup && <span className="tag shrink-0 px-2 text-ink-faint">Account setup</span>}
-            {configured &&
-              (user ? (
-                <PinkHoverButton
-                  variant="xs"
-                  onClick={() => void signOut()}
-                  title={migrationMessage ?? user.email ?? "Signed in"}
-                >
-                  Sign out
-                </PinkHoverButton>
-              ) : (
-                <PinkHoverButton
-                  variant="xs"
-                  hoverAccent="yellow"
-                  onClick={() => setAuthOpen(true)}
-                >
-                  Sign in
-                </PinkHoverButton>
-              ))}
+            {configured && !user ? (
+              <PinkHoverButton
+                variant="xs"
+                hoverAccent="yellow"
+                onClick={() => setAuthOpen(true)}
+              >
+                Sign in
+              </PinkHoverButton>
+            ) : null}
           </nav>
         </div>
         {user && migrationStatus === "running" && (

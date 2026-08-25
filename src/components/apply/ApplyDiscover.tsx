@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Sheet, Tab } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { ApplicationMode } from "@/components/apply/ApplicationMode";
@@ -11,9 +12,18 @@ import {
   defaultFilters,
   filterAndSortJobs,
 } from "@/components/apply/filterJobs";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { CatalogIngestButton } from "@/components/apply/CatalogIngestButton";
+import {
+  calculateJobMatch,
+  matchPercentForSort,
+  profileHasMatchInputs,
+} from "@/lib/matching";
+import { PROFILE_UPDATED_EVENT } from "@/lib/profile/profileEvents";
+import { loadProfileBundle } from "@/lib/profile/profileRepository";
 import type { ApplicationMode as Mode, JobFiltersState } from "@/types/apply";
 import type { JobListingView } from "@/lib/apply/types";
-import { CatalogIngestButton } from "@/components/apply/CatalogIngestButton";
+import type { UserProfileBundle } from "@/types/profile";
 
 export function ApplyDiscover({
   mode,
@@ -34,17 +44,94 @@ export function ApplyDiscover({
     markApplied,
     addToAutoQueue,
   } = useApplyContext();
+  const { user, configured } = useAuth();
 
   const [filters, setFilters] = useState<JobFiltersState>(defaultFilters);
   const [detail, setDetail] = useState<JobListingView | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [profileBundle, setProfileBundle] = useState<UserProfileBundle | null>(null);
+  const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
+
+  useEffect(() => {
+    if (!configured || !user) {
+      setProfileBundle(null);
+      setProfileStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = () => {
+      setProfileStatus((prev) => (prev === "ready" ? "ready" : "loading"));
+      void loadProfileBundle(user.id)
+        .then((bundle) => {
+          if (cancelled) return;
+          setProfileBundle(bundle);
+          setProfileStatus("ready");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setProfileBundle(null);
+          setProfileStatus("error");
+        });
+    };
+
+    load();
+
+    const onProfileUpdated = () => load();
+    const onFocus = () => load();
+    window.addEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [configured, user]);
+
+  const profileReady = Boolean(
+    profileBundle &&
+      profileHasMatchInputs({
+        roles: profileBundle.targets.roles,
+        graduationYear: profileBundle.profile.graduationYear,
+        employmentTypes: profileBundle.targets.employmentTypes,
+        workModes: profileBundle.targets.workModes,
+        locations: profileBundle.targets.locations,
+        skills: profileBundle.experiences.flatMap((e) => e.skills),
+      }),
+  );
+
+  const matchedJobs = useMemo(() => {
+    if (!profileBundle || !profileReady) {
+      return jobs.map((job) => {
+        const { matchResult: _drop, ...rest } = job;
+        void _drop;
+        return { ...rest, matchPercent: null as number | null, matchResult: null };
+      });
+    }
+    return jobs.map((job) => {
+      const matchResult = calculateJobMatch(job, profileBundle);
+      return {
+        ...job,
+        matchPercent: matchPercentForSort(matchResult),
+        matchResult,
+      };
+    });
+  }, [jobs, profileBundle, profileReady]);
 
   const visible = useMemo(
-    () => filterAndSortJobs(jobs, filters, savedIds),
-    [jobs, filters, savedIds],
+    () => filterAndSortJobs(matchedJobs, filters, savedIds),
+    [matchedJobs, filters, savedIds],
   );
   const activeFilterCount = countActiveFilters(filters);
   const appliedJobIds = useMemo(() => new Set(apps.map((a) => a.jobId)), [apps]);
+
+  const detailJob = useMemo(() => {
+    if (!detail) return null;
+    return matchedJobs.find((j) => j.id === detail.id) ?? detail;
+  }, [detail, matchedJobs]);
 
   const flash = (message: string) => {
     setToast(message);
@@ -102,6 +189,28 @@ export function ApplyDiscover({
         />
       </Reveal>
 
+      {configured && user && profileStatus === "ready" && !profileReady && (
+        <Sheet tone="yellow" soft shadow="hard-sm" className="px-5 py-4">
+          <p className="font-display text-sm font-black uppercase">Limited match ranking</p>
+          <p className="mt-1 text-[0.95rem] text-ink-soft">
+            Add at least one target role plus graduation year, employment type, work mode,
+            locations, or experience skills in Profile to personalize Best Match.
+          </p>
+          <Link
+            to="/profile"
+            className="focus-ink mt-3 inline-block border-2 border-ink bg-paper px-3 py-2 font-display text-sm font-black uppercase outline-none hover:bg-ink hover:text-paper"
+          >
+            Complete Profile
+          </Link>
+        </Sheet>
+      )}
+
+      {!configured || !user ? (
+        <p className="tag text-ink-faint">
+          Sign in and complete Profile preferences to unlock personalized Best Match ranking.
+        </p>
+      ) : null}
+
       <div className="space-y-5">
         {status === "loading" && (
           <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
@@ -133,6 +242,7 @@ export function ApplyDiscover({
               {activeFilterCount
                 ? ` · ${activeFilterCount} filter group${activeFilterCount === 1 ? "" : "s"}`
                 : ""}
+              {profileReady ? " · matches from your Profile" : ""}
             </p>
             {warnings.length > 0 && (
               <p className="tag text-ink-faint">Partial source load: {warnings.join(" · ")}</p>
@@ -181,17 +291,17 @@ export function ApplyDiscover({
       </div>
 
       <JobDetail
-        job={detail}
+        job={detailJob}
         mode={mode}
-        applied={detail ? appliedJobIds.has(detail.id) : false}
+        applied={detailJob ? appliedJobIds.has(detailJob.id) : false}
         onClose={() => setDetail(null)}
         onApply={() => {
-          if (detail) applyAction(detail);
+          if (detailJob) applyAction(detailJob);
         }}
         onMarkApplied={() => {
-          if (!detail) return;
-          markApplied(detail);
-          flash(`Marked ${detail.company} as applied.`);
+          if (!detailJob) return;
+          markApplied(detailJob);
+          flash(`Marked ${detailJob.company} as applied.`);
         }}
       />
 

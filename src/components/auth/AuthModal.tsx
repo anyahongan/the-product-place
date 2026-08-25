@@ -84,11 +84,17 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
         </label>
         {error && <p className="mt-3 text-[0.9rem] text-pink">{error}</p>}
         <div className="mt-5 flex flex-wrap gap-2">
-          <PinkHoverButton variant="ink" disabled={busy || !email || password.length < 6} onClick={() => void submit()}>
+          <PinkHoverButton
+            variant="ink"
+            hoverAccent="blue"
+            disabled={busy || !email || password.length < 6}
+            onClick={() => void submit()}
+          >
             {busy ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}
           </PinkHoverButton>
           <PinkHoverButton
             variant="paper"
+            hoverAccent="blue"
             onClick={() => {
               setMode(mode === "signin" ? "signup" : "signin");
               setError(null);

@@ -2,12 +2,15 @@ import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const PINK = "var(--pink)";
-const YELLOW_WASH = "var(--yellow-wash)";
+const BLUE = "var(--blue)";
+const YELLOW = "var(--yellow)";
+const GREEN = "var(--green)";
+const PURPLE = "var(--purple)";
 const PAPER = "var(--paper)";
 const INK = "var(--ink)";
 
 type Variant = "paper" | "ink" | "close" | "closeSm" | "xs" | "tag";
-type HoverAccent = "pink" | "yellow";
+export type HoverAccent = "pink" | "yellow" | "blue" | "green" | "purple";
 
 const baseByVariant: Record<Variant, string> = {
   paper:
@@ -21,9 +24,26 @@ const baseByVariant: Record<Variant, string> = {
   tag: "focus-ink tag border-2 border-ink px-2 py-1 font-black uppercase outline-none transition-[background-color,color] duration-150",
 };
 
+function accentColors(accent: HoverAccent): { bg: string; fg: string } {
+  switch (accent) {
+    case "yellow":
+      return { bg: YELLOW, fg: INK };
+    case "green":
+      return { bg: GREEN, fg: INK };
+    case "blue":
+      return { bg: BLUE, fg: PAPER };
+    case "purple":
+      return { bg: PURPLE, fg: PAPER };
+    case "pink":
+      return { bg: PINK, fg: PAPER };
+    default:
+      return { bg: PINK, fg: PAPER };
+  }
+}
+
 /**
  * Guaranteed hover fill (CSS-only hover was unreliable / too subtle on this page).
- * Default accent is pink; use hoverAccent="yellow" for pale yellow (auth controls).
+ * Default accent is pink; pass hoverAccent for step/section themes.
  */
 export function PinkHoverButton({
   variant = "paper",
@@ -44,8 +64,7 @@ export function PinkHoverButton({
   const [hot, setHot] = useState(false);
   const idleBg = variant === "ink" ? INK : PAPER;
   const idleFg = variant === "ink" ? PAPER : INK;
-  const hotBg = hoverAccent === "yellow" ? YELLOW_WASH : PINK;
-  const hotFg = hoverAccent === "yellow" ? INK : PAPER;
+  const { bg: hotBg, fg: hotFg } = accentColors(hoverAccent);
 
   return (
     <button
