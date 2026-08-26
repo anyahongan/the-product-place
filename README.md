@@ -2,7 +2,7 @@
 
 I'm really big on alliteration, so in short, the Prodct Place is a preppy, personalized product path (PPPP) for discovering roles, preparing for PM recruiting, building product skills, and creating portfolio-ready work.
 
-**Live demo:**  [https://the-product-place.vercel.app/https://the-product-place.vercel.app/https://the-product-place.vercel.app/https://the-product-place.vercel.app/*A](https://the-product-place.vercel.app/)*
+**Live demo:** [https://the-product-place.vercel.app/](https://the-product-place.vercel.app/)
 
 ---
 
