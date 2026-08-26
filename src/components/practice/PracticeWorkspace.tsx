@@ -170,9 +170,7 @@ export function PracticeWorkspace({
         <Reveal from="down" distance={24}>
           <Tab color="yellow">Section 05 · Practice</Tab>
           <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-            <h1
-              className={`font-display text-[clamp(2.6rem,10vw,6.5rem)] font-black uppercase leading-[0.82] ${practiceHeadingYellow}`}
-            >
+            <h1 className="font-display text-[clamp(2.6rem,10vw,6.5rem)] font-black uppercase leading-[0.82] text-ink">
               Practice
             </h1>
             <p className="tag text-yellow-ink-deep">
