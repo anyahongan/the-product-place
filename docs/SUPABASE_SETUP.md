@@ -141,11 +141,14 @@ npm run lint
 npm run build
 ```
 
-## What stays mock / client
+## Beta notes
 
-- Recommended contact matching, AI, Gmail/Calendar, Quick/Auto apply execution
-- LLM/search discovery adapter is an interface only (`SearchDiscoveryAdapter`)
-- No recurring ingestion schedule yet
+- **Best Match, contact scoring, Quick Apply, and interview prep** use deterministic logic with optional OpenAI augmentation on the server.
+- **Quick / Auto Apply** prepare materials and queue roles; you submit on employer sites (no auto-submit).
+- **Gmail/Calendar integration** is not implemented — outreach is copy-only drafts.
+- **LinkedIn live sync** is not implemented — CSV import is supported.
+- **Recurring catalog ingest** is manual (Refresh button / CLI); no cron yet.
+- LLM job discovery is an interface stub only (`SearchDiscoveryAdapter`).
 
 ## Future LLM discovery plug-in
 
