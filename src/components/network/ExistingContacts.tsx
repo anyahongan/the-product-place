@@ -5,9 +5,11 @@ import type { NetworkContact } from "@/types/network";
 export function ExistingContacts({
   contacts,
   onOpen,
+  resolveCompanyName,
 }: {
   contacts: NetworkContact[];
   onOpen: (id: string) => void;
+  resolveCompanyName?: (companyId: string) => string;
 }) {
   return (
     <section>
@@ -27,7 +29,15 @@ export function ExistingContacts({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {contacts.map((contact, i) => (
-            <ContactCard key={contact.id} contact={contact} index={i} onOpen={onOpen} />
+            <ContactCard
+              key={contact.id}
+              contact={contact}
+              index={i}
+              onOpen={onOpen}
+              {...(resolveCompanyName
+                ? { companyName: resolveCompanyName(contact.companyId) }
+                : {})}
+            />
           ))}
         </div>
       )}

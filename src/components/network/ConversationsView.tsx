@@ -3,6 +3,8 @@ import { Sheet } from "@/components/paper/Paper";
 import { formatNetworkDate, networkCompanies } from "@/data/network";
 import type { NetworkContact, TimelineEvent } from "@/types/network";
 import type { Tone } from "@/components/paper/Paper";
+import { ContactLinkedInLink } from "@/components/network/ContactLinkedInLink";
+import { normalizeLinkedInUrl } from "@/lib/network/linkedinUrl";
 import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 
 type ConversationRow = {
@@ -82,15 +84,27 @@ export function ConversationsView({
                   </span>
                 </button>
                 <p className="mt-2 text-[0.95rem] text-ink-soft">
-                  <button
-                    type="button"
-                    onClick={() => onOpenContact(contact.id)}
-                    className="focus-ink font-black uppercase outline-none hover:text-pink"
-                  >
-                    {contact.name}
-                  </button>
+                  {normalizeLinkedInUrl(contact.linkedinUrl) ? (
+                    <a
+                      href={normalizeLinkedInUrl(contact.linkedinUrl)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="focus-ink font-black uppercase outline-none hover:underline"
+                    >
+                      {contact.name}
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onOpenContact(contact.id)}
+                      className="focus-ink font-black uppercase outline-none hover:text-pink"
+                    >
+                      {contact.name}
+                    </button>
+                  )}
                   <span> · {contact.title}</span>
                 </p>
+                <ContactLinkedInLink url={contact.linkedinUrl} className="mt-2" size="xs" />
                 {event.detail && (
                   <p className="mt-1 text-[0.9rem] text-ink-faint">{event.detail}</p>
                 )}

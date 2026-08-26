@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import type { NetworkCompany } from "@/types/network";
+import { ALL_NETWORK_COMPANIES_ID } from "@/types/network";
 import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 
 export function CompanySelector({
@@ -41,6 +42,28 @@ export function CompanySelector({
         aria-label="Companies"
         className="flex w-full flex-wrap items-center gap-2 border-2 border-ink bg-pink-wash p-2 shadow-hard-sm"
       >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={value === ALL_NETWORK_COMPANIES_ID}
+          onClick={() => onChange(ALL_NETWORK_COMPANIES_ID)}
+          className={cn(
+            "focus-ink relative z-10 min-w-[6.5rem] px-4 py-3 text-left outline-none",
+            value === ALL_NETWORK_COMPANIES_ID ? "text-ink" : "text-ink-soft hover:bg-yellow-wash",
+          )}
+        >
+          {value === ALL_NETWORK_COMPANIES_ID && (
+            <motion.span
+              {...(reduced ? {} : { layoutId: "network-company-tab" })}
+              className="absolute inset-0 z-[-1] border-2 border-ink bg-yellow"
+              transition={{ duration: 0.22, ease: [0.2, 0.9, 0.2, 1] }}
+            />
+          )}
+          <span className="font-display text-[1.05rem] font-black uppercase leading-none tracking-[-0.03em] sm:text-[1.25rem]">
+            All
+          </span>
+        </button>
+
         {companies.map((company) => {
           const active = value === company.id;
           return (

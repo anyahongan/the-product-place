@@ -14,6 +14,8 @@ import {
 } from "@/components/apply/filterJobs";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CatalogIngestButton } from "@/components/apply/CatalogIngestButton";
+import { AutoQueuePanel } from "@/components/apply/AutoQueuePanel";
+import { QuickApplyPanel } from "@/components/apply/QuickApplyPanel";
 import {
   calculateJobMatch,
   matchPercentForSort,
@@ -43,11 +45,14 @@ export function ApplyDiscover({
     toggleSaved,
     markApplied,
     addToAutoQueue,
+    removeFromAutoQueue,
+    queueIds,
   } = useApplyContext();
   const { user, configured } = useAuth();
 
   const [filters, setFilters] = useState<JobFiltersState>(defaultFilters);
   const [detail, setDetail] = useState<JobListingView | null>(null);
+  const [quickApplyJob, setQuickApplyJob] = useState<JobListingView | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [profileBundle, setProfileBundle] = useState<UserProfileBundle | null>(null);
   const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "ready" | "error">(
@@ -128,6 +133,14 @@ export function ApplyDiscover({
   const activeFilterCount = countActiveFilters(filters);
   const appliedJobIds = useMemo(() => new Set(apps.map((a) => a.jobId)), [apps]);
 
+  const queuedJobs = useMemo(
+    () =>
+      [...queueIds]
+        .map((id) => matchedJobs.find((job) => job.id === id))
+        .filter((job): job is JobListingView => Boolean(job)),
+    [queueIds, matchedJobs],
+  );
+
   const detailJob = useMemo(() => {
     if (!detail) return null;
     return matchedJobs.find((j) => j.id === detail.id) ?? detail;
@@ -153,11 +166,12 @@ export function ApplyDiscover({
       return;
     }
     if (mode === "quick") {
-      flash("Quick Apply tailored materials are coming later. Use Manual to open the link.");
+      setQuickApplyJob(job);
+      setDetail(null);
       return;
     }
     addToAutoQueue(job);
-    flash(`Added ${job.company} to your local Auto Queue. Nothing was submitted.`);
+    flash(`Added ${job.company} to your Auto Queue. Nothing was submitted.`);
   };
 
   return (
@@ -180,6 +194,40 @@ export function ApplyDiscover({
       <Reveal from="right" distance={50} delay={0.05}>
         <ApplicationMode value={mode} onChange={onModeChange} />
       </Reveal>
+
+      {mode === "auto" && (
+        <Reveal from="up" distance={30} delay={0.06}>
+          <AutoQueuePanel
+            jobs={queuedJobs}
+            onOpenEmployer={(job) => {
+              if (!job.applicationUrl) {
+                flash("No direct application link available for this role.");
+                return;
+              }
+              openExternal(job.applicationUrl);
+              flash(`Opened ${job.company} application in a new tab.`);
+            }}
+            onRemove={(jobId) => {
+              removeFromAutoQueue(jobId);
+              flash("Removed from Auto Queue.");
+            }}
+            onMarkApplied={(job) => {
+              markApplied(job);
+              removeFromAutoQueue(job.id);
+              flash(`Marked ${job.company} as applied and removed from queue.`);
+            }}
+            onOpenNext={() => {
+              const next = queuedJobs.find((job) => job.applicationUrl);
+              if (!next?.applicationUrl) {
+                flash("No queued roles with a direct application link.");
+                return;
+              }
+              openExternal(next.applicationUrl);
+              flash(`Opened ${next.company} application in a new tab.`);
+            }}
+          />
+        </Reveal>
+      )}
 
       <Reveal from="up" distance={30} delay={0.08}>
         <JobFiltersPanel
@@ -247,7 +295,7 @@ export function ApplyDiscover({
             {warnings.length > 0 && (
               <p className="tag text-ink-faint">Partial source load: {warnings.join(" · ")}</p>
             )}
-            <CatalogIngestButton />
+            <CatalogIngestButton onComplete={() => void reload()} />
 
             {visible.length === 0 ? (
               <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
@@ -281,6 +329,7 @@ export function ApplyDiscover({
                   onApply={() => applyAction(job)}
                   onMarkApplied={() => {
                     markApplied(job);
+                    removeFromAutoQueue(job.id);
                     flash(`Marked ${job.company} as applied.`);
                   }}
                 />
@@ -294,6 +343,8 @@ export function ApplyDiscover({
         job={detailJob}
         mode={mode}
         applied={detailJob ? appliedJobIds.has(detailJob.id) : false}
+        profileBundle={profileBundle}
+        userId={user?.id ?? null}
         onClose={() => setDetail(null)}
         onApply={() => {
           if (detailJob) applyAction(detailJob);
@@ -301,9 +352,33 @@ export function ApplyDiscover({
         onMarkApplied={() => {
           if (!detailJob) return;
           markApplied(detailJob);
+          removeFromAutoQueue(detailJob.id);
           flash(`Marked ${detailJob.company} as applied.`);
         }}
       />
+
+      {quickApplyJob && (
+        <QuickApplyPanel
+          job={quickApplyJob}
+          profileBundle={profileBundle}
+          userId={user?.id ?? null}
+          onClose={() => setQuickApplyJob(null)}
+          onOpenEmployer={() => {
+            if (!quickApplyJob.applicationUrl) {
+              flash("No direct application link available for this role.");
+              return;
+            }
+            openExternal(quickApplyJob.applicationUrl);
+            flash(`Opened ${quickApplyJob.company} application in a new tab.`);
+          }}
+          onMarkApplied={() => {
+            markApplied(quickApplyJob);
+            removeFromAutoQueue(quickApplyJob.id);
+            flash(`Marked ${quickApplyJob.company} as applied.`);
+            setQuickApplyJob(null);
+          }}
+        />
+      )}
 
       {toast && (
         <div

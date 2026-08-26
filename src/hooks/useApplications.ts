@@ -79,6 +79,17 @@ export function useApplications() {
     });
   }, []);
 
+  const removeFromAutoQueue = useCallback((jobId: string) => {
+    setQueueIds((prev) => {
+      const next = new Set(prev);
+      next.delete(jobId);
+      return next;
+    });
+    setApps((prev) =>
+      prev.map((app) => (app.jobId === jobId ? { ...app, autoQueued: false } : app)),
+    );
+  }, []);
+
   const setStatus = useCallback((applicationId: string, status: ApplicationLifecycleStatus) => {
     setApps((prev) =>
       prev.map((app) => (app.applicationId === applicationId ? appendStatus(app, status) : app)),
@@ -124,6 +135,7 @@ export function useApplications() {
     toggleSaved,
     markApplied,
     addToAutoQueue,
+    removeFromAutoQueue,
     setStatus,
   };
 }

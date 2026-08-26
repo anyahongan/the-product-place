@@ -10,9 +10,17 @@ import { FollowUpQueue } from "@/components/network/FollowUpQueue";
 import { ConversationsView } from "@/components/network/ConversationsView";
 import { ContactProfile } from "@/components/network/ContactProfile";
 import { OutreachDraftPanel } from "@/components/network/OutreachDraft";
+import { LinkedInConnectionsImport } from "@/components/network/LinkedInConnectionsImport";
 import { CommunicationFormatPrompt } from "@/components/network/CommunicationFormatPrompt";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { draftOutreachFn } from "@/lib/network/draftOutreach.server";
+import { buildOutreachDraftLocal } from "@/lib/network/outreachDraftLocal";
+import { withContactMatchScores } from "@/lib/network/scoreContactMatch";
+import { PROFILE_UPDATED_EVENT } from "@/lib/profile/profileEvents";
+import { loadProfileBundle } from "@/lib/profile/profileRepository";
+import type { UserProfileBundle } from "@/types/profile";
 import { useRecruiting } from "@/components/recruiting/useRecruiting";
-import { draftForContact } from "@/data/network";
+import { networkCompanies } from "@/data/network";
 import { companyIdFromName, toneForCompanyId } from "@/types/recruiting";
 import type {
   CommunicationFormatPreference,
@@ -21,6 +29,7 @@ import type {
   NetworkView,
   OutreachDraft,
 } from "@/types/network";
+import { ALL_NETWORK_COMPANIES_ID } from "@/types/network";
 
 const EXTRA_CATALOG: NetworkCompany[] = [
   { id: "co-asana", name: "Asana", tone: "pink" },
@@ -90,7 +99,11 @@ export function NetworkWorkspace() {
     updateContact,
     addCompanyToCatalog,
     hydrated,
+    importLinkedInConnections,
   } = useRecruiting();
+  const { user, configured } = useAuth();
+
+  const [profileBundle, setProfileBundle] = useState<UserProfileBundle | null>(null);
 
   const catalog = useMemo(() => {
     const map = new Map<string, NetworkCompany>();
@@ -106,7 +119,7 @@ export function NetworkWorkspace() {
   }, [apps, companies]);
 
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
-  const [companyId, setCompanyId] = useState("co-figma");
+  const [companyId, setCompanyId] = useState(ALL_NETWORK_COMPANIES_ID);
   const [view, setView] = useState<NetworkView>("contacts");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focusEventId, setFocusEventId] = useState<string | null>(null);
@@ -116,6 +129,7 @@ export function NetworkWorkspace() {
   const [showFormatPrompt, setShowFormatPrompt] = useState(false);
   const [savedFlashIds, setSavedFlashIds] = useState<Record<string, boolean>>({});
   const [searchApplied, setSearchApplied] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
 
   useEffect(() => {
     const existing = loadFormatPref();
@@ -125,6 +139,34 @@ export function NetworkWorkspace() {
   }, []);
 
   useEffect(() => {
+    if (!configured || !user) {
+      setProfileBundle(null);
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      void loadProfileBundle(user.id)
+        .then((bundle) => {
+          if (!cancelled) setProfileBundle(bundle);
+        })
+        .catch(() => {
+          if (!cancelled) setProfileBundle(null);
+        });
+    };
+    load();
+    window.addEventListener(PROFILE_UPDATED_EVENT, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(PROFILE_UPDATED_EVENT, load);
+    };
+  }, [configured, user]);
+
+  const scoredContacts = useMemo(
+    () => withContactMatchScores(contacts, profileBundle, apps),
+    [contacts, profileBundle, apps],
+  );
+
+  useEffect(() => {
     if (!hydrated || visibleIds.length > 0) return;
     setVisibleIds(defaultVisible.length ? defaultVisible : catalog.slice(0, 5).map((c) => c.id));
   }, [hydrated, defaultVisible, catalog, visibleIds.length]);
@@ -132,7 +174,9 @@ export function NetworkWorkspace() {
   useEffect(() => {
     if (!hydrated || searchApplied) return;
 
-    if (search.company && catalog.some((c) => c.id === search.company)) {
+    if (search.company === ALL_NETWORK_COMPANIES_ID) {
+      setCompanyId(ALL_NETWORK_COMPANIES_ID);
+    } else if (search.company && catalog.some((c) => c.id === search.company)) {
       setCompanyId(search.company);
       setVisibleIds((prev) =>
         prev.includes(search.company!) ? prev : [...prev, search.company!],
@@ -168,14 +212,27 @@ export function NetworkWorkspace() {
     [catalog, visibleIds],
   );
 
+  const companyNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of catalog) map.set(c.id, c.name);
+    for (const c of networkCompanies) map.set(c.id, c.name);
+    return map;
+  }, [catalog]);
+
+  const resolveCompanyName = (id: string) => companyNameById.get(id) ?? "Unknown company";
+
+  const allCompanies = companyId === ALL_NETWORK_COMPANIES_ID;
+
   const company =
-    catalog.find((c) => c.id === companyId) ??
-    barCompanies[0] ??
-    ({ id: companyId, name: "Company", tone: "pink" } as const);
+    allCompanies
+      ? ({ id: ALL_NETWORK_COMPANIES_ID, name: "All companies", tone: "blue" } as const)
+      : (catalog.find((c) => c.id === companyId) ??
+        barCompanies[0] ??
+        ({ id: companyId, name: "Company", tone: "pink" } as const));
 
   const filtered = useMemo(
-    () => contacts.filter((c) => c.companyId === companyId),
-    [contacts, companyId],
+    () => (allCompanies ? scoredContacts : scoredContacts.filter((c) => c.companyId === companyId)),
+    [scoredContacts, companyId, allCompanies],
   );
 
   const existing = filtered.filter((c) => !c.isRecommended);
@@ -214,7 +271,9 @@ export function NetworkWorkspace() {
     setSelectedId(null);
     setFocusEventId(null);
     setQueueDraft(null);
-    void navigate({ search: { company: id } });
+    void navigate({
+      search: id === ALL_NETWORK_COMPANIES_ID ? { company: ALL_NETWORK_COMPANIES_ID } : { company: id },
+    });
   };
 
   const toggleVisible = (id: string) => {
@@ -255,14 +314,64 @@ export function NetworkWorkspace() {
     handleCompanyChange(id);
   };
 
-  const makeDraft = (contact: NetworkContact, kind: OutreachDraft["kind"]) =>
-    draftForContact(contact, kind, formatPref, apps);
+  const roleTitleForContact = (contact: NetworkContact) =>
+    apps.find((a) => contact.relatedApplicationIds.includes(a.applicationId))?.title ??
+    "a product internship";
 
   const startOutreachDraft = (id: string, kind: OutreachDraft["kind"] = "COLD OUTREACH") => {
-    const c = contacts.find((x) => x.id === id);
+    const c = scoredContacts.find((x) => x.id === id);
     if (!c) return;
     setContacts((prev) => prev.map((x) => (x.id === id ? markOutreachDrafted(x) : x)));
-    setQueueDraft({ id, draft: makeDraft({ ...c, isRecommended: false }, kind) });
+    const companyName = resolveCompanyName(c.companyId);
+    const roleTitle = roleTitleForContact(c);
+    const profile = profileBundle?.profile;
+
+    void (async () => {
+      let draft: OutreachDraft;
+      if (formatPref?.mode === "ai" && user) {
+        try {
+          draft = await draftOutreachFn({
+            data: {
+              userId: user.id,
+              contact: { ...c, isRecommended: false },
+              kind,
+              companyName,
+              roleTitle,
+              useAi: true,
+            },
+          });
+        } catch {
+          draft = buildOutreachDraftLocal({
+            contact: { ...c, isRecommended: false },
+            kind,
+            format: formatPref,
+            profile: {
+              preferredName: profile?.preferredName ?? "",
+              school: profile?.school ?? "",
+              major: profile?.major ?? "",
+              preferredEmail: profile?.preferredEmail ?? "",
+            },
+            companyName,
+            roleTitle,
+          });
+        }
+      } else {
+        draft = buildOutreachDraftLocal({
+          contact: { ...c, isRecommended: false },
+          kind,
+          format: formatPref,
+          profile: {
+            preferredName: profile?.preferredName ?? "",
+            school: profile?.school ?? "",
+            major: profile?.major ?? "",
+            preferredEmail: profile?.preferredEmail ?? "",
+          },
+          companyName,
+          roleTitle,
+        });
+      }
+      setQueueDraft({ id, draft });
+    })();
   };
 
   return (
@@ -279,12 +388,26 @@ export function NetworkWorkspace() {
             Network
           </h1>
           <p className="mt-4 max-w-2xl text-[1.02rem] text-ink-soft">
-            A relationship workspace around each company: who you know, who to meet next, and what
-            to do after every conversation.
+            {allCompanies
+              ? "Everyone across your network — contacts, follow-ups, and conversations in one place. Pick a company to focus outreach."
+              : "A relationship workspace around each company: who you know, who to meet next, and what to do after every conversation."}
           </p>
         </header>
 
         <div className="space-y-5">
+          <LinkedInConnectionsImport
+            contacts={scoredContacts}
+            companies={catalog}
+            busy={importBusy}
+            onImport={async (plan) => {
+              setImportBusy(true);
+              try {
+                await importLinkedInConnections(plan);
+              } finally {
+                setImportBusy(false);
+              }
+            }}
+          />
           <CompanySelector
             companies={barCompanies}
             catalog={catalog}
@@ -307,13 +430,21 @@ export function NetworkWorkspace() {
           >
             {view === "contacts" && (
               <div className="space-y-12">
-                <ExistingContacts contacts={existing} onOpen={(id) => openProfile(id)} />
-                <ContactSaturation companyName={company.name} contacts={existing} />
+                <ExistingContacts
+                  contacts={existing}
+                  onOpen={(id) => openProfile(id)}
+                  {...(allCompanies ? { resolveCompanyName } : {})}
+                />
+                <ContactSaturation
+                  companyName={allCompanies ? "Network-wide" : company.name}
+                  contacts={existing}
+                />
                 <RecommendedContacts
                   contacts={recommended}
                   onOpen={(id) => openProfile(id)}
                   onSave={(id) => saveContact(id)}
                   onDraft={(id) => startOutreachDraft(id, "COLD OUTREACH")}
+                  {...(allCompanies ? { resolveCompanyName } : {})}
                 />
                 {Object.keys(savedFlashIds).length > 0 && recommended.length === 0 && (
                   <p className="tag text-green">Saved contacts now appear under Your Contacts.</p>
@@ -324,6 +455,8 @@ export function NetworkWorkspace() {
             {view === "follow-ups" && (
               <FollowUpQueue
                 contacts={filtered}
+                allCompanies={allCompanies}
+                {...(allCompanies ? { resolveCompanyName } : {})}
                 onOpen={(id) => openProfile(id)}
                 onSnooze={(id) => {
                   const c = contacts.find((x) => x.id === id);

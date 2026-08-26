@@ -12,7 +12,6 @@ function staticModules(company: string, title: string): PrepModule[] {
         "Clarify the user and the job-to-be-done",
         "Name the metric you would move",
         "Propose 2–3 solutions with tradeoffs",
-        "Static sample content — replace later with tailored prep",
       ],
     },
     {

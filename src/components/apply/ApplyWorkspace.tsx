@@ -6,6 +6,7 @@ import { ApplyDiscover } from "@/components/apply/ApplyDiscover";
 import { AppliedOverview } from "@/components/apply/AppliedOverview";
 import { InterviewWorkspace } from "@/components/apply/InterviewWorkspace";
 import { ApplyProvider } from "@/components/apply/ApplyContext";
+import { loadApplicationMode, saveApplicationMode } from "@/lib/apply/applicationModePreference";
 import type { ApplicationMode, LifecycleTab } from "@/types/apply";
 
 const routeApi = getRouteApi("/apply");
@@ -14,8 +15,12 @@ export function ApplyWorkspace() {
   const search = routeApi.useSearch();
   const navigate = useNavigate({ from: "/apply" });
   const [tab, setTab] = useState<LifecycleTab>(search.tab ?? "apply");
-  const [mode, setMode] = useState<ApplicationMode>("manual");
+  const [mode, setMode] = useState<ApplicationMode>(() => loadApplicationMode());
   const reduced = useReducedMotion();
+
+  useEffect(() => {
+    saveApplicationMode(mode);
+  }, [mode]);
 
   useEffect(() => {
     if (search.tab) setTab(search.tab);

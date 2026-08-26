@@ -230,6 +230,7 @@ export async function upsertContactRow(
     legacy_company_id: contact.companyId,
     name: contact.name,
     title: contact.title,
+    linkedin_url: contact.linkedinUrl?.trim() || null,
     contact_type: contact.contactType,
     is_recruiter: contact.isRecruiter,
     is_campus_recruiter: contact.isCampusRecruiter,

@@ -12,6 +12,7 @@ type AppsSlice = Pick<
   | "toggleSaved"
   | "markApplied"
   | "addToAutoQueue"
+  | "removeFromAutoQueue"
   | "setStatus"
 >;
 

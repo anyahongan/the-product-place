@@ -1,6 +1,8 @@
 import { motion, useReducedMotion } from "motion/react";
 import { Sheet, Tape } from "@/components/paper/Paper";
 import { NextActionBadge, RecruiterBadge } from "@/components/network/Badges";
+import { ContactLinkedInLink } from "@/components/network/ContactLinkedInLink";
+import { normalizeLinkedInUrl } from "@/lib/network/linkedinUrl";
 import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 import { formatNetworkDate } from "@/data/network";
 import type { NetworkContact } from "@/types/network";
@@ -11,12 +13,16 @@ export function FollowUpQueue({
   onSnooze,
   onDismiss,
   onDraft,
+  resolveCompanyName,
+  allCompanies = false,
 }: {
   contacts: NetworkContact[];
   onOpen: (id: string) => void;
   onSnooze: (id: string) => void;
   onDismiss: (id: string) => void;
   onDraft: (id: string) => void;
+  resolveCompanyName?: (companyId: string) => string;
+  allCompanies?: boolean;
 }) {
   const reduced = useReducedMotion();
   const actionable = contacts.filter(
@@ -41,7 +47,9 @@ export function FollowUpQueue({
 
       {actionable.length === 0 && (
         <p className="border-2 border-dashed border-ink/40 bg-paper px-4 py-8 text-ink-soft">
-          Nothing queued for this company. Switch companies or add a next action on a contact.
+          {allCompanies
+            ? "Nothing queued across your network. Pick a company or add a next action on a contact."
+            : "Nothing queued for this company. Switch companies or add a next action on a contact."}
         </p>
       )}
 
@@ -60,16 +68,33 @@ export function FollowUpQueue({
                     contactType={contact.contactType}
                     isCampusRecruiter={contact.isCampusRecruiter}
                   />
-                  <button
-                    type="button"
-                    onClick={() => onOpen(contact.id)}
-                    className="focus-ink mt-2 block text-left outline-none"
-                  >
-                    <span className="font-display text-[1.25rem] font-black uppercase leading-none">
+                  {normalizeLinkedInUrl(contact.linkedinUrl) ? (
+                    <a
+                      href={normalizeLinkedInUrl(contact.linkedinUrl)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="focus-ink mt-2 block font-display text-[1.25rem] font-black uppercase leading-none outline-none hover:underline"
+                    >
                       {contact.name}
-                    </span>
-                  </button>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onOpen(contact.id)}
+                      className="focus-ink mt-2 block text-left outline-none"
+                    >
+                      <span className="font-display text-[1.25rem] font-black uppercase leading-none">
+                        {contact.name}
+                      </span>
+                    </button>
+                  )}
                   <p className="mt-1 text-[0.92rem] text-ink-soft">{contact.title}</p>
+                  {resolveCompanyName && (
+                    <span className="tag mt-2 inline-block border-2 border-ink bg-blue-wash px-2 py-0.5 uppercase text-ink">
+                      {resolveCompanyName(contact.companyId)}
+                    </span>
+                  )}
+                  <ContactLinkedInLink url={contact.linkedinUrl} className="mt-2" size="xs" />
                   <p className="tag mt-2 text-ink-faint">
                     {contact.nextFollowUp
                       ? `Follow-up ${formatNetworkDate(contact.nextFollowUp)}`

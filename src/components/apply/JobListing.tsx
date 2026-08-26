@@ -36,6 +36,8 @@ export function JobListing({
   const offset = offsets[index % offsets.length] ?? "";
   const workLabel = job.workMode ? WORK_MODE_LABELS[job.workMode] : "Work mode unknown";
   const empLabel = job.employmentType ? EMPLOYMENT_TYPE_LABELS[job.employmentType] : "Type unknown";
+  const applyDisabled =
+    job.closed || (mode === "manual" && !job.applicationUrl);
 
   return (
     <Reveal
@@ -113,7 +115,7 @@ export function JobListing({
               <button
                 type="button"
                 onClick={onApply}
-                disabled={job.closed || !job.applicationUrl}
+                disabled={applyDisabled}
                 className="focus-ink border-2 border-ink bg-yellow px-3 py-2 font-display text-sm font-black uppercase outline-none hover:translate-x-0.5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {modeCta(mode)}

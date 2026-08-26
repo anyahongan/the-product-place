@@ -1,5 +1,8 @@
 export type NetworkView = "contacts" | "follow-ups" | "conversations";
 
+/** Company selector value for the unfiltered network-wide view. */
+export const ALL_NETWORK_COMPANIES_ID = "all";
+
 export type ContactType =
   "RECRUITER" | "CAMPUS RECRUITER" | "PRODUCT MANAGER" | "FORMER INTERN" | "ALUM" | "OTHER";
 
@@ -114,6 +117,8 @@ export type NetworkContact = {
   companyId: string;
   name: string;
   title: string;
+  /** Public LinkedIn profile URL when known. */
+  linkedinUrl: string | null;
   contactType: ContactType;
   isRecruiter: boolean;
   isCampusRecruiter: boolean;

@@ -1,17 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
+import { ApplyMaterialsSection } from "@/components/apply/ApplyMaterialsSection";
 import { EMPLOYMENT_TYPE_LABELS, formatShortDate, WORK_MODE_LABELS } from "@/data/apply";
 import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
 import { modeCta } from "@/components/apply/modeCta";
+import { generateMaterialsForJob } from "@/lib/apply/generateMaterialsForJob";
+import type { ApplyMaterialsResult } from "@/lib/apply/generateApplyMaterials";
 import { cn } from "@/lib/utils";
 import type { ApplicationMode } from "@/types/apply";
 import type { JobListingView } from "@/lib/apply/types";
+import type { UserProfileBundle } from "@/types/profile";
 
 export function JobDetail({
   job,
   mode,
   applied,
+  profileBundle,
+  userId,
   onClose,
   onApply,
   onMarkApplied,
@@ -19,11 +25,22 @@ export function JobDetail({
   job: JobListingView | null;
   mode: ApplicationMode;
   applied: boolean;
+  profileBundle: UserProfileBundle | null;
+  userId: string | null;
   onClose: () => void;
   onApply: () => void;
   onMarkApplied: () => void;
 }) {
   const reduced = useReducedMotion();
+  const applyDisabled = job ? job.closed || (mode === "manual" && !job.applicationUrl) : true;
+  const [materials, setMaterials] = useState<ApplyMaterialsResult | null>(null);
+  const [materialsBusy, setMaterialsBusy] = useState(false);
+  const [materialsError, setMaterialsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMaterials(null);
+    setMaterialsError(null);
+  }, [job?.id]);
 
   useEffect(() => {
     if (!job) return;
@@ -167,7 +184,7 @@ export function JobDetail({
                 <button
                   type="button"
                   onClick={onApply}
-                  disabled={job.closed || !job.applicationUrl}
+                  disabled={applyDisabled}
                   className="focus-ink border-2 border-ink bg-yellow px-4 py-3 font-display text-base font-black uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {modeCta(mode)}
@@ -183,29 +200,32 @@ export function JobDetail({
                   {applied ? "Marked applied" : "Mark applied"}
                 </button>
                 <p className="tag text-ink-faint">
-                  Manual mode opens the employer link. Nothing is auto-submitted.
+                  {mode === "manual"
+                    ? "Manual mode opens the employer link. Nothing is auto-submitted."
+                    : mode === "quick"
+                      ? "Quick mode opens a materials packet from Profile, then the employer link."
+                      : "Auto mode adds roles to your local queue. Nothing is auto-submitted."}
                 </p>
               </div>
 
-              <div className="mt-6 grid gap-2 border-2 border-dashed border-ink/40 bg-paper/70 p-4">
-                <p className="tag text-ink-faint">
-                  Quick Apply tailored materials coming later. Not available yet.
-                </p>
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed border-2 border-ink/30 bg-paper-2 px-3 py-2 text-left font-display text-sm font-black uppercase text-ink-faint"
-                >
-                  Tailor resume
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed border-2 border-ink/30 bg-paper-2 px-3 py-2 text-left font-display text-sm font-black uppercase text-ink-faint"
-                >
-                  Create cover letter
-                </button>
-              </div>
+              <ApplyMaterialsSection
+                materials={materials}
+                busy={materialsBusy}
+                error={materialsError}
+                onGenerate={() => {
+                  if (!job) return;
+                  setMaterialsBusy(true);
+                  setMaterialsError(null);
+                  void generateMaterialsForJob({ userId, profileBundle, job })
+                    .then(setMaterials)
+                    .catch((e) =>
+                      setMaterialsError(
+                        e instanceof Error ? e.message : "Could not generate materials",
+                      ),
+                    )
+                    .finally(() => setMaterialsBusy(false));
+                }}
+              />
             </Sheet>
           </motion.div>
         </motion.div>

@@ -16,6 +16,7 @@ import {
 } from "@/lib/apply/repositories/applicationRepository";
 import type { Company, ContactApplicationLink } from "@/types/recruiting";
 import type { NetworkContact, NetworkNote } from "@/types/network";
+import type { LinkedInImportPlan } from "@/lib/network/mergeLinkedInConnections";
 import {
   ensureSeedCompanies,
   listCompanies,
@@ -307,6 +308,27 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     [persistenceMode, user],
   );
 
+  const removeFromAutoQueue = useCallback(
+    (jobId: string) => {
+      setQueueIds((prev) => {
+        const next = new Set(prev);
+        next.delete(jobId);
+        return next;
+      });
+      setApps((prev) =>
+        prev.map((app) => (app.jobId === jobId ? { ...app, autoQueued: false } : app)),
+      );
+      if (persistenceMode === "supabase" && user) {
+        void setSavedAutoQueue(user.id, jobId, false)
+          .then(() => setPersistError(null))
+          .catch((e) =>
+            setPersistError(e instanceof Error ? e.message : "Failed to update auto-queue"),
+          );
+      }
+    },
+    [persistenceMode, user],
+  );
+
   const setStatus = useCallback(
     (applicationId: string, status: ApplicationLifecycleStatus) => {
       const app = apps.find((a) => a.applicationId === applicationId);
@@ -425,6 +447,37 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     setCompanies((prev) => (prev.some((c) => c.id === company.id) ? prev : [...prev, company]));
   }, []);
 
+  const importLinkedInConnections = useCallback(
+    async (plan: LinkedInImportPlan) => {
+      setCompanies(plan.nextCompanies);
+
+      if (persistenceMode !== "supabase" || !user) {
+        setContacts(plan.nextContacts);
+        return;
+      }
+
+      let nextLinks = links;
+      let nextContactList = plan.nextContacts;
+
+      try {
+        for (const { prev, next } of plan.changedContacts) {
+          const result = await persistContactChange(user.id, prev, next, nextLinks);
+          nextLinks = result.links;
+          nextContactList = nextContactList.map((c) =>
+            c.id === next.id || c.id === result.contact.id ? result.contact : c,
+          );
+        }
+        setContacts(nextContactList);
+        setLinks(nextLinks);
+        setPersistError(null);
+      } catch (e) {
+        setPersistError(e instanceof Error ? e.message : "LinkedIn import failed to sync");
+        throw e;
+      }
+    },
+    [links, persistenceMode, user],
+  );
+
   const interviewingApps = useMemo(
     () => apps.filter((a) => INTERVIEW_ELIGIBLE_STATUSES.includes(a.currentStatus)),
     [apps],
@@ -468,12 +521,14 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     toggleSaved,
     markApplied,
     addToAutoQueue,
+    removeFromAutoQueue,
     setStatus,
     updateContact,
     setContacts: setContactsState,
     setNotes: setNotesState,
     addCompanyToCatalog,
     ensureCompanyForJob,
+    importLinkedInConnections,
   };
 
   return (

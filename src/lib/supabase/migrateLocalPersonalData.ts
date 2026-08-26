@@ -194,6 +194,7 @@ async function upsertContact(
       legacy_company_id: c.companyId,
       name: c.name,
       title: c.title,
+      linkedin_url: c.linkedinUrl?.trim() || null,
       contact_type: c.contactType,
       is_recruiter: c.isRecruiter,
       is_campus_recruiter: c.isCampusRecruiter,

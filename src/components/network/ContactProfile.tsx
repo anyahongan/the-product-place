@@ -8,6 +8,7 @@ import { NotesTimeline } from "@/components/network/NotesTimeline";
 import { OutreachDraftPanel } from "@/components/network/OutreachDraft";
 import { MeetingPrep } from "@/components/network/MeetingPrep";
 import { AddTimelineEvent } from "@/components/network/AddTimelineEvent";
+import { ContactLinkedInLink } from "@/components/network/ContactLinkedInLink";
 import { referralStatusClass } from "@/components/network/networkUi";
 import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 import {
@@ -25,6 +26,7 @@ import type {
   TimelineEvent,
 } from "@/types/network";
 import type { ApplicationRecord } from "@/lib/apply/types";
+import { normalizeLinkedInUrl } from "@/lib/network/linkedinUrl";
 import { useNavigate } from "@tanstack/react-router";
 import { formatShortDate } from "@/data/apply";
 
@@ -116,6 +118,7 @@ export function ContactProfile({
   const reduced = useReducedMotion();
   const draftSectionRef = useRef<HTMLElement>(null);
   const notesSectionRef = useRef<HTMLElement>(null);
+  const linkedin = normalizeLinkedInUrl(contact.linkedinUrl);
   const companyName =
     applications.find((a) => a.companyId === contact.companyId)?.company ??
     networkCompanies.find((c) => c.id === contact.companyId)?.name;
@@ -195,9 +198,20 @@ export function ContactProfile({
                   contactType={contact.contactType}
                   isCampusRecruiter={contact.isCampusRecruiter}
                 />
-                <h2 className="mt-3 font-display text-[clamp(1.8rem,5vw,2.4rem)] font-black uppercase leading-[0.9] tracking-[-0.03em]">
-                  {contact.name}
-                </h2>
+                {linkedin ? (
+                  <a
+                    href={linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="focus-ink mt-3 block font-display text-[clamp(1.8rem,5vw,2.4rem)] font-black uppercase leading-[0.9] tracking-[-0.03em] outline-none hover:underline"
+                  >
+                    {contact.name}
+                  </a>
+                ) : (
+                  <h2 className="mt-3 font-display text-[clamp(1.8rem,5vw,2.4rem)] font-black uppercase leading-[0.9] tracking-[-0.03em]">
+                    {contact.name}
+                  </h2>
+                )}
                 <p className="mt-2 text-[1rem] text-ink-soft">
                   {contact.title}
                   {companyName ? ` · ${companyName}` : ""}
@@ -210,6 +224,11 @@ export function ContactProfile({
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
+                {linkedin ? (
+                  <ContactLinkedInLink url={contact.linkedinUrl} className="mt-3" />
+                ) : (
+                  <p className="tag mt-3 text-ink-faint">No LinkedIn URL yet — add below</p>
+                )}
               </div>
               <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
                 <PinkHoverButton variant="close" onClick={onClose}>
@@ -236,6 +255,23 @@ export function ContactProfile({
           </div>
 
           <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
+            <Sheet tone="paper" shadow="hard-sm" className="px-4 py-4">
+              <p className="tag text-ink-faint">LinkedIn</p>
+              <input
+                type="url"
+                value={contact.linkedinUrl ?? ""}
+                onChange={(e) =>
+                  onUpdateContact({
+                    ...contact,
+                    linkedinUrl: e.target.value.trim() || null,
+                  })
+                }
+                placeholder="https://www.linkedin.com/in/…"
+                className="mt-2 w-full border-2 border-ink bg-paper px-3 py-2 text-[0.95rem] outline-none focus:bg-blue-wash"
+              />
+              {linkedin && <ContactLinkedInLink url={contact.linkedinUrl} className="mt-3" />}
+            </Sheet>
+
             <Sheet tone="paper" shadow="hard-sm" className="px-4 py-4">
               <p className="tag text-ink-faint">Related to</p>
               {relatedApps.length === 0 ? (

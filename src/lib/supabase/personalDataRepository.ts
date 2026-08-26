@@ -134,6 +134,7 @@ export async function loadPersonalFromSupabase(userId: string): Promise<{
     companyId: (c.company_id as string) || (c.legacy_company_id as string) || "co-unknown",
     name: c.name as string,
     title: c.title as string,
+    linkedinUrl: (c.linkedin_url as string) || null,
     contactType: c.contact_type as NetworkContact["contactType"],
     isRecruiter: Boolean(c.is_recruiter),
     isCampusRecruiter: Boolean(c.is_campus_recruiter),

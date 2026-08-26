@@ -15,12 +15,12 @@ const modes: {
   {
     id: "quick",
     label: "Quick",
-    blurb: "Tailored materials coming later. Use Manual to apply for now.",
+    blurb: "Opens a materials packet from your Profile, then the employer link. You still submit.",
   },
   {
     id: "auto",
     label: "Auto",
-    blurb: "Saves roles to a local Auto Queue only. Never submits applications.",
+    blurb: "Queues roles locally and walks you through opening them. Never auto-submits.",
   },
 ];
 
@@ -40,7 +40,7 @@ export function ApplicationMode({
         <span className="font-display text-[1.05rem] font-black uppercase tracking-[-0.03em]">
           Application mode
         </span>
-        <span className="tag text-paper/80">UI state only</span>
+        <span className="tag text-paper/80">Saved on this device</span>
       </div>
 
       <div

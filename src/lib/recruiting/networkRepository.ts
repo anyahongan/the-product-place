@@ -8,8 +8,16 @@ const NOTES_KEY = "tpp.recruiting.notes.v1";
 const LINKS_KEY = "tpp.recruiting.links.v1";
 const SEEDED_KEY = "tpp.recruiting.networkSeeded.v1";
 
+function normalizeContact(contact: NetworkContact): NetworkContact {
+  const seed = networkContacts.find((s) => s.id === contact.id);
+  return {
+    ...contact,
+    linkedinUrl: contact.linkedinUrl ?? seed?.linkedinUrl ?? null,
+  };
+}
+
 export function listContacts(): NetworkContact[] {
-  return readJson<NetworkContact[]>(CONTACTS_KEY, []);
+  return readJson<NetworkContact[]>(CONTACTS_KEY, []).map(normalizeContact);
 }
 
 export function saveContacts(contacts: NetworkContact[]) {

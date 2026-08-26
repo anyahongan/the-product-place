@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { NetworkWorkspace } from "@/components/network/NetworkWorkspace";
+import { ALL_NETWORK_COMPANIES_ID } from "@/types/network";
 
 export type NetworkSearch = {
   company?: string;
@@ -10,7 +11,10 @@ export type NetworkSearch = {
 export const Route = createFileRoute("/network")({
   validateSearch: (search: Record<string, unknown>): NetworkSearch => {
     const out: NetworkSearch = {};
-    if (typeof search["company"] === "string") out.company = search["company"];
+    if (typeof search["company"] === "string") {
+      out.company =
+        search["company"] === ALL_NETWORK_COMPANIES_ID ? ALL_NETWORK_COMPANIES_ID : search["company"];
+    }
     if (typeof search["application"] === "string") out.application = search["application"];
     if (typeof search["contact"] === "string") out.contact = search["contact"];
     return out;

@@ -1,8 +1,10 @@
 import { Sheet, Clip } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { NextActionBadge, RecruiterBadge } from "@/components/network/Badges";
+import { ContactLinkedInLink } from "@/components/network/ContactLinkedInLink";
 import { netBtn } from "@/components/network/networkUi";
 import { formatNetworkDate } from "@/data/network";
+import { normalizeLinkedInUrl } from "@/lib/network/linkedinUrl";
 import type { NetworkContact } from "@/types/network";
 import { cn } from "@/lib/utils";
 
@@ -11,12 +13,16 @@ export function ContactCard({
   index = 0,
   onOpen,
   recommended = false,
+  companyName,
 }: {
   contact: NetworkContact;
   index?: number;
   onOpen: (id: string) => void;
   recommended?: boolean;
+  companyName?: string;
 }) {
+  const linkedin = normalizeLinkedInUrl(contact.linkedinUrl);
+
   return (
     <Reveal
       from="up"
@@ -24,10 +30,17 @@ export function ContactCard({
       distance={40}
       rotate={index % 2 === 0 ? -0.6 : 0.6}
     >
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onOpen(contact.id)}
-        className="focus-ink group block w-full text-left outline-none"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen(contact.id);
+          }
+        }}
+        className="focus-ink group block w-full cursor-pointer text-left outline-none"
       >
         <Sheet
           tone={recommended ? "pink" : "paper"}
@@ -47,10 +60,28 @@ export function ContactCard({
             />
             <NextActionBadge action={contact.nextAction} />
           </div>
-          <h3 className="mt-3 font-display text-[1.35rem] font-black uppercase leading-[0.95] tracking-[-0.03em]">
-            {contact.name}
-          </h3>
+          {linkedin ? (
+            <a
+              href={linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="focus-ink mt-3 block font-display text-[1.35rem] font-black uppercase leading-[0.95] tracking-[-0.03em] outline-none hover:underline"
+            >
+              {contact.name}
+            </a>
+          ) : (
+            <h3 className="mt-3 font-display text-[1.35rem] font-black uppercase leading-[0.95] tracking-[-0.03em]">
+              {contact.name}
+            </h3>
+          )}
           <p className="mt-1 text-[0.95rem] text-ink-soft">{contact.title}</p>
+          {companyName && (
+            <span className="tag mt-2 inline-block border-2 border-ink bg-blue-wash px-2 py-0.5 uppercase text-ink">
+              {companyName}
+            </span>
+          )}
+          <ContactLinkedInLink url={contact.linkedinUrl} className="mt-2" />
           {recommended && contact.matchScore != null && (
             <p className="mt-3 font-display text-[1.15rem] font-black uppercase text-ink">
               {contact.matchScore}% match
@@ -80,7 +111,7 @@ export function ContactCard({
             </p>
           )}
         </Sheet>
-      </button>
+      </div>
     </Reveal>
   );
 }

@@ -1,23 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tab, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
 import { NetworkInsightsPanel } from "@/components/apply/NetworkInsightsPanel";
 import { useApplyContext } from "@/components/apply/useApplyContext";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { useRecruiting } from "@/components/recruiting/useRecruiting";
 import { notesForInterviewPrep } from "@/lib/recruiting/selectors";
 import { applicationToInterviewItem } from "@/lib/apply/interviewFromApplication";
+import { generateInterviewPrepFn } from "@/lib/apply/generateInterviewPrep.server";
+import { generateInterviewPrepLocally } from "@/lib/apply/generateInterviewPrep";
 import { formatInterviewWhen } from "@/data/apply";
 import { cn } from "@/lib/utils";
-import type { InterviewItem, PrepModuleId } from "@/types/apply";
+import type { InterviewItem, PrepModule, PrepModuleId } from "@/types/apply";
+
+type PrepCacheEntry = {
+  modules: PrepModule[];
+  source: "ai" | "coach";
+};
 
 export function InterviewWorkspace({
   focusApplicationId,
 }: {
   focusApplicationId?: string;
 }) {
-  const { interviewingApps, hydrated } = useApplyContext();
+  const { interviewingApps, hydrated, jobs } = useApplyContext();
+  const { user } = useAuth();
   const { notes, contacts } = useRecruiting();
   const interviews = useMemo(
     () => interviewingApps.map(applicationToInterviewItem),
@@ -26,10 +35,54 @@ export function InterviewWorkspace({
 
   const [openId, setOpenId] = useState<string | null>(focusApplicationId ?? null);
   const [moduleId, setModuleId] = useState<PrepModuleId>("product-sense");
+  const [prepCache, setPrepCache] = useState<Record<string, PrepCacheEntry>>({});
+  const [prepBusy, setPrepBusy] = useState<string | null>(null);
+  const loadedPrepRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (focusApplicationId) setOpenId(focusApplicationId);
   }, [focusApplicationId]);
+
+  useEffect(() => {
+    if (!openId || loadedPrepRef.current.has(openId)) return;
+    const app = interviewingApps.find((a) => a.applicationId === openId);
+    if (!app) return;
+    loadedPrepRef.current.add(openId);
+    const job = jobs.find((j) => j.id === app.jobId);
+
+    setPrepBusy(openId);
+    const load = user
+      ? generateInterviewPrepFn({
+          data: {
+            userId: user.id,
+            jobId: app.jobId,
+            company: app.company,
+            title: app.title,
+            description: job?.description ?? "",
+            responsibilities: job?.responsibilities ?? [],
+          },
+        })
+      : Promise.resolve(
+          generateInterviewPrepLocally({
+            company: app.company,
+            title: app.title,
+            description: job?.description ?? "",
+            responsibilities: job?.responsibilities ?? [],
+            profile: null,
+            experiences: [],
+            networkInsights: notesForInterviewPrep(notes, app.applicationId).map((note) => ({
+              text: note.text,
+              contactName: contacts.find((c) => c.id === note.contactId)?.name ?? null,
+            })),
+          }),
+        );
+
+    void load
+      .then((result) => {
+        setPrepCache((prev) => ({ ...prev, [openId]: result }));
+      })
+      .finally(() => setPrepBusy(null));
+  }, [openId, interviewingApps, jobs, user, notes, contacts]);
 
   return (
     <div className="space-y-8">
@@ -42,8 +95,7 @@ export function InterviewWorkspace({
             <span className="text-blue">Let&apos;s prepare for this role.</span>
           </h2>
           <p className="mt-4 text-[1.02rem] text-ink-soft md:whitespace-nowrap">
-            Active interviews with role-specific modules. Static prompts for now, no AI generation
-            yet.
+            Role-specific prep modules from your Profile, the job posting, and Network insights.
           </p>
         </div>
       </Reveal>
@@ -61,28 +113,34 @@ export function InterviewWorkspace({
             </p>
           </Sheet>
         ) : (
-          interviews.map((item, i) => (
-            <InterviewCard
-              key={item.id}
-              item={item}
-              index={i}
-              active={openId === item.applicationId}
-              moduleId={moduleId}
-              insights={notesForInterviewPrep(notes, item.applicationId).map((note) => ({
-                note,
-                contact: contacts.find((c) => c.id === note.contactId),
-              }))}
-              onModule={setModuleId}
-              onToggle={() => {
-                if (openId === item.applicationId) {
-                  setOpenId(null);
-                  return;
-                }
-                setOpenId(item.applicationId);
-                setModuleId("product-sense");
-              }}
-            />
-          ))
+          interviews.map((item, i) => {
+            const modules = prepCache[item.applicationId]?.modules ?? item.modules;
+            const prepSource = prepCache[item.applicationId]?.source;
+            return (
+              <InterviewCard
+                key={item.id}
+                item={{ ...item, modules }}
+                index={i}
+                active={openId === item.applicationId}
+                moduleId={moduleId}
+                prepBusy={prepBusy === item.applicationId}
+                {...(prepSource ? { prepSource } : {})}
+                insights={notesForInterviewPrep(notes, item.applicationId).map((note) => ({
+                  note,
+                  contact: contacts.find((c) => c.id === note.contactId),
+                }))}
+                onModule={setModuleId}
+                onToggle={() => {
+                  if (openId === item.applicationId) {
+                    setOpenId(null);
+                    return;
+                  }
+                  setOpenId(item.applicationId);
+                  setModuleId("product-sense");
+                }}
+              />
+            );
+          })
         )}
       </div>
     </div>
@@ -94,6 +152,8 @@ function InterviewCard({
   index,
   active,
   moduleId,
+  prepBusy,
+  prepSource,
   insights,
   onModule,
   onToggle,
@@ -102,6 +162,8 @@ function InterviewCard({
   index: number;
   active: boolean;
   moduleId: PrepModuleId;
+  prepBusy: boolean;
+  prepSource?: "ai" | "coach";
   insights: { note: import("@/types/network").NetworkNote; contact: import("@/types/network").NetworkContact | undefined }[];
   onModule: (id: PrepModuleId) => void;
   onToggle: () => void;
@@ -221,7 +283,11 @@ function InterviewCard({
                         ))}
                       </ul>
                       <p className="tag mt-5 text-ink-faint">
-                        Static sample content, AI prep not implemented yet
+                        {prepBusy
+                          ? "Building role-specific prep…"
+                          : prepSource
+                            ? `Prep source: ${prepSource === "ai" ? "AI" : "Coach"} · facts from Profile + posting`
+                            : "Open to load tailored prep"}
                       </p>
                     </motion.div>
                   </AnimatePresence>

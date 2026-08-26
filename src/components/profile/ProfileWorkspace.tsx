@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { Sheet, Tape } from "@/components/paper/Paper";
 import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -667,13 +668,21 @@ export function ProfileWorkspace() {
                 onChange={(e) => setDetails({ ...details, phone: e.target.value })}
               />
             </label>
-            <label className="block">
+            <label className="block sm:col-span-2">
               <span className="tag text-ink-faint">LinkedIn URL</span>
               <input
                 className={fieldClass()}
                 value={details.linkedinUrl}
                 onChange={(e) => setDetails({ ...details, linkedinUrl: e.target.value })}
               />
+              <p className="mt-2 text-[0.88rem] text-ink-soft">
+                To import your LinkedIn connections into Network, export{" "}
+                <span className="font-black text-ink">Connections.csv</span> from LinkedIn and use{" "}
+                <Link to="/network" className="font-black text-ink underline-offset-2 hover:underline">
+                  Network → Import
+                </Link>
+                .
+              </p>
             </label>
             <label className="block">
               <span className="tag text-ink-faint">GitHub URL</span>

@@ -19,6 +19,7 @@ export function ApplyProvider({ children }: { children: ReactNode }) {
         toggleSaved: recruiting.toggleSaved,
         markApplied: recruiting.markApplied,
         addToAutoQueue: recruiting.addToAutoQueue,
+        removeFromAutoQueue: recruiting.removeFromAutoQueue,
         setStatus: recruiting.setStatus,
       }}
     >

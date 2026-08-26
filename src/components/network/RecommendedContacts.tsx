@@ -10,11 +10,13 @@ export function RecommendedContacts({
   onOpen,
   onDraft,
   onSave,
+  resolveCompanyName,
 }: {
   contacts: NetworkContact[];
   onOpen: (id: string) => void;
   onDraft: (id: string) => void;
   onSave: (id: string) => void;
+  resolveCompanyName?: (companyId: string) => string;
 }) {
   const ranked = [...contacts].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
   const [savedUi, setSavedUi] = useState<Record<string, boolean>>({});
@@ -28,7 +30,8 @@ export function RecommendedContacts({
             Recommended matches
           </h2>
           <p className="mt-2 max-w-xl text-[0.95rem] text-ink-soft">
-            Mock match scores for now. Structure is ready for a real recommender later.
+            Ranked from your Profile, applications, and contact signals. Save a contact to move
+            them into Your Contacts.
           </p>
         </div>
         <p className="tag text-ink-faint">{ranked.length} ranked</p>
@@ -44,7 +47,15 @@ export function RecommendedContacts({
             const justSaved = !!savedUi[contact.id];
             return (
               <div key={contact.id} className="space-y-0">
-                <ContactCard contact={contact} index={i} onOpen={onOpen} recommended />
+                <ContactCard
+                  contact={contact}
+                  index={i}
+                  onOpen={onOpen}
+                  recommended
+                  {...(resolveCompanyName
+                    ? { companyName: resolveCompanyName(contact.companyId) }
+                    : {})}
+                />
                 <Sheet tone="paper" shadow="hard-sm" className="-mt-1 border-t-0 px-4 py-3">
                   <MatchReasons reasons={contact.matchReasons} />
                   <div className="mt-3 flex flex-wrap gap-2">

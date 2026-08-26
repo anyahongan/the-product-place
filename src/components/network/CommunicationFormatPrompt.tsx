@@ -65,7 +65,7 @@ export function CommunicationFormatPrompt({
                 AI format
               </span>
               <span className="mt-3 block flex-1 text-[0.9rem] text-ink-soft">
-                Start with Product Place drafted language (static for now; ready for AI later).
+                Draft from your Profile facts with AI when configured, otherwise a coach template.
               </span>
             </button>
             <button

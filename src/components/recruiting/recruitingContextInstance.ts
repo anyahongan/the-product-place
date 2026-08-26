@@ -3,6 +3,7 @@ import type { ApplicationLifecycleStatus, ApplicationRecord } from "@/lib/apply/
 import type { JobListingView } from "@/lib/apply/types";
 import type { Company, ContactApplicationLink } from "@/types/recruiting";
 import type { NetworkContact, NetworkNote } from "@/types/network";
+import type { LinkedInImportPlan } from "@/lib/network/mergeLinkedInConnections";
 
 export type RecruitingContextValue = {
   apps: ApplicationRecord[];
@@ -24,6 +25,7 @@ export type RecruitingContextValue = {
   toggleSaved: (jobId: string) => void;
   markApplied: (job: JobListingView) => void;
   addToAutoQueue: (job: JobListingView) => void;
+  removeFromAutoQueue: (jobId: string) => void;
   setStatus: (applicationId: string, status: ApplicationLifecycleStatus) => void;
   updateContact: (next: NetworkContact) => void;
   setContacts: (
@@ -32,6 +34,7 @@ export type RecruitingContextValue = {
   setNotes: (next: NetworkNote[] | ((prev: NetworkNote[]) => NetworkNote[])) => void;
   addCompanyToCatalog: (company: Company) => void;
   ensureCompanyForJob: (job: JobListingView) => string;
+  importLinkedInConnections: (plan: LinkedInImportPlan) => Promise<void>;
 };
 
 export const RecruitingContext = createContext<RecruitingContextValue | null>(null);
