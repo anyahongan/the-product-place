@@ -175,7 +175,7 @@ export function PracticeWorkspace({
             >
               Practice
             </h1>
-            <p className="tag text-ink-soft">
+            <p className="tag text-yellow-ink-deep">
               {user
                 ? `${completedDrills} drills completed`
                 : `${counts.total} prompts · ${counts.mc + counts.cb} tap-to-answer`}

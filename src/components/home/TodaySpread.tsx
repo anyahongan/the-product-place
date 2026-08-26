@@ -95,13 +95,12 @@ export function TodaySpread() {
             initial={reduced ? false : { x: 120, y: 40, rotate: 5, opacity: 0 }}
             animate={play ? { x: 0, y: 0, rotate: -1.1, opacity: 1 } : {}}
             transition={{ duration: 0.62, ease: [0.2, 0.9, 0.2, 1] }}
-            className="relative lg:-mt-6 lg:-mr-[6vw]"
+            className="relative min-w-0 lg:-mt-6"
           >
             <Sheet
               tone="paper"
               shadow="hard"
-              className="group relative px-5 pb-8 pt-9 sm:px-9"
-              style={{ background: "oklch(0.975 0.022 356)" }}
+              className="group relative bg-pink-wash px-4 pb-8 pt-9 sm:px-9"
             >
               <motion.div
                 initial={reduced ? false : { y: -46, opacity: 0 }}
@@ -127,7 +126,7 @@ export function TodaySpread() {
                     initial={reduced ? false : { x: -24, opacity: 0 }}
                     animate={play ? { x: 0, opacity: 1 } : {}}
                     transition={{ duration: 0.3, delay: 0.45 + i * 0.07 }}
-                    className="group/item flex items-start gap-3 border-b border-rule py-[0.6rem]"
+                    className="group/item flex items-start gap-2 border-b border-rule py-[0.6rem] sm:gap-3"
                   >
                     <Check done={task.done} onClick={() => toggle(task.id)} />
                     <span className="relative min-w-0 flex-1 text-[1rem] leading-tight">
@@ -146,7 +145,7 @@ export function TodaySpread() {
                       type="button"
                       onClick={() => remove(task.id)}
                       aria-label={`Delete "${task.text}"`}
-                      className="focus-ink tag shrink-0 text-ink-faint opacity-0 transition-all hover:text-pink focus:outline-none group-hover/item:opacity-100 focus-visible:opacity-100"
+                      className="focus-ink tag shrink-0 px-1 text-ink-faint opacity-80 transition-all hover:text-pink focus:outline-none sm:opacity-0 sm:group-hover/item:opacity-100 sm:group-focus-within/item:opacity-100 focus-visible:opacity-100"
                     >
                       DEL
                     </button>

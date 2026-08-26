@@ -163,16 +163,13 @@ function PracticeGlimpse() {
       >
         {Array.from({ length: 12 }).map((_, i) => {
           const tone =
-            i % 3 === 0 ? "yellow" : i % 3 === 1 ? "paper" : "lavender";
+            i % 3 === 0 ? "yellow" : i % 3 === 1 ? "paper" : "purple-wash";
           return (
             <span
               key={i}
               className="tag border-2 border-ink px-3 py-1"
               style={{
-                background:
-                  tone === "lavender"
-                    ? "oklch(0.88 0.06 295)"
-                    : `var(--${tone})`,
+                background: `var(--${tone})`,
                 color: "var(--ink)",
               }}
             >

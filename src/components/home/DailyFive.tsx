@@ -13,8 +13,7 @@ export function DailyFive() {
     offset: ["start start", "end end"],
   });
 
-  const bigScale = useTransform(scrollYProgress, [0, 0.35, 1], [1.1, 1, 0.78]);
-  const bigX = useTransform(scrollYProgress, [0, 1], ["0%", "-6%"]);
+  const bigScale = useTransform(scrollYProgress, [0, 0.35, 1], [1.05, 1, 0.92]);
   const gridY = useTransform(scrollYProgress, [0, 1], [-80, 80]);
 
   return (
@@ -37,9 +36,9 @@ export function DailyFive() {
 
         <div className="mt-10 grid gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-14">
           {/* the pinned typographic showpiece */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
+          <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
             <motion.div
-              style={reduced ? {} : { scale: bigScale, x: bigX }}
+              style={reduced ? {} : { scale: bigScale }}
               className="origin-top-left"
             >
               {/* compact: one/two lines on narrower screens */}
@@ -68,20 +67,23 @@ export function DailyFive() {
                 </span>
               </div>
             </motion.div>
-            <p className="tag relative z-10 mt-6 text-ink-soft lg:mt-12 lg:max-w-[40ch] xl:mt-16 xl:max-w-[28ch]">
+            <p className="tag relative z-10 mt-6 max-w-[40ch] text-ink-soft lg:mt-12">
               Daily five-minute rundown and one idea, concept, or framework.
-              <br />
-              Explained simply and emphasizes why you should care.
+              <br className="hidden sm:block" />
+              <span className="sm:whitespace-normal">
+                {" "}
+                Explained simply and emphasizes why you should care.
+              </span>
             </p>
           </div>
 
-          {/* fragments assembling around it */}
-          <div className="space-y-8">
+          {/* topic + explainer */}
+          <div className="min-w-0 space-y-8">
             <Reveal from="right" distance={90}>
               <h2 className="font-display text-[clamp(2.4rem,6.4vw,4.4rem)] font-black leading-[0.84] text-ink">
                 {dailyFive.topic}
               </h2>
-              <p className="mt-4 whitespace-nowrap text-[1.1rem] leading-snug text-ink-soft">
+              <p className="mt-4 max-w-[48ch] text-[1.1rem] leading-snug text-ink-soft">
                 {dailyFive.subtitle}
               </p>
             </Reveal>
@@ -100,9 +102,10 @@ export function DailyFive() {
                 </p>
               </Sheet>
             </Reveal>
+          </div>
 
-            {/* wider views: stretch across both columns to fill space under 5 MIN READ */}
-            <div className="space-y-8 lg:relative lg:z-10 lg:w-[calc(169.5%+3.5rem)] lg:-ml-[calc(69.5%+3.5rem)]">
+          {/* full-width blocks — sit below both columns so nothing overlaps the sticky headline */}
+          <div className="min-w-0 space-y-8 lg:col-span-2">
             <Reveal from="left" distance={70} delay={0.05}>
               <div className="border-l-[6px] border-blue py-2 pl-5">
                 <Label className="text-blue">Why it matters for PM</Label>
@@ -117,8 +120,7 @@ export function DailyFive() {
                 tone="paper"
                 shadow="hard-sm"
                 tilt={-0.8}
-                className="px-6 py-7 sm:px-8 lg:max-w-none"
-                style={{ background: "oklch(0.95 0.08 98)" }}
+                className="bg-yellow-wash px-6 py-7 sm:px-8 lg:max-w-none"
               >
                 <h3 className="font-display text-[1.5rem] font-black text-ink">
                   Take away exactly two things
@@ -141,7 +143,7 @@ export function DailyFive() {
                   ))}
                 </ol>
                 <motion.p
-                  className="mt-6 w-max font-display text-[1.05rem] font-extrabold uppercase text-ink"
+                  className="mt-6 max-w-full font-display text-[1.05rem] font-extrabold uppercase text-ink"
                   initial={reduced ? false : { opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
@@ -185,7 +187,7 @@ export function DailyFive() {
                 />
                 <Clip className="absolute -left-5 top-12 z-30" angle={-92} color="blue" />
 
-                <h3 className="font-display text-[clamp(1.85rem,4.5vw,2.6rem)] font-black leading-[0.84] whitespace-nowrap">
+                <h3 className="font-display text-[clamp(1.85rem,4.5vw,2.6rem)] font-black leading-[0.84]">
                   KEEP LEARNING.
                 </h3>
 
@@ -224,7 +226,6 @@ export function DailyFive() {
                 </Link>
               </Sheet>
             </Reveal>
-            </div>
           </div>
         </div>
       </div>

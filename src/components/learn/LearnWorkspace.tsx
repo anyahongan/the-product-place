@@ -265,7 +265,7 @@ export function LearnWorkspace({
             <h1 className="font-display text-[clamp(2.6rem,10vw,6.5rem)] font-black uppercase leading-[0.82]">
               Learn
             </h1>
-            <p className="tag text-ink-soft">
+            <p className="tag text-green">
               {completedCount} / {totalCount} completed
               {!user ? " · this device" : ""}
             </p>

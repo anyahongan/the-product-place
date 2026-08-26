@@ -94,7 +94,7 @@ export function InterviewWorkspace({
             <br />
             <span className="text-blue">Let&apos;s prepare for this role.</span>
           </h2>
-          <p className="mt-4 text-[1.02rem] text-ink-soft md:whitespace-nowrap">
+          <p className="mt-4 max-w-[42ch] text-[1.02rem] leading-relaxed text-ink-soft">
             Role-specific prep modules from your Profile, the job posting, and Network insights.
           </p>
         </div>

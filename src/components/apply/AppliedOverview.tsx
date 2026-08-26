@@ -51,7 +51,7 @@ export function AppliedOverview({
             <br />
             applications
           </h2>
-          <p className="mt-4 text-[1.02rem] text-ink-soft md:whitespace-nowrap">
+          <p className="mt-4 max-w-[42ch] text-[1.02rem] leading-relaxed text-ink-soft">
             Manage submitted roles, see where things stand, and find people worth a nudge.
           </p>
         </div>
