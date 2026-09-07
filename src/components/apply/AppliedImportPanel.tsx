@@ -4,6 +4,10 @@ import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 import { parseAppliedImportText } from "@/lib/apply/parseAppliedImport";
 import { parseAppliedImportImageFn } from "@/lib/apply/parseAppliedImportImage.server";
 import {
+  isOpenAiKeyMissingError,
+  parseAppliedImportImageOcr,
+} from "@/lib/apply/parseAppliedImportImageClient";
+import {
   planAppliedImport,
   type AppliedImportPlan,
 } from "@/lib/apply/planAppliedImport";
@@ -56,9 +60,19 @@ export function AppliedImportPanel({
       setParsing(true);
       try {
         const dataUrl = await readFileAsDataUrl(file);
-        const result = await parseAppliedImportImageFn({
-          data: { imageDataUrl: dataUrl, fileName: file.name },
-        });
+        let result: { rows: AppliedImportPlan["records"][number]["row"][]; warnings: string[] };
+        try {
+          result = await parseAppliedImportImageFn({
+            data: { imageDataUrl: dataUrl, fileName: file.name },
+          });
+        } catch (e) {
+          const message = e instanceof Error ? e.message : "";
+          if (isOpenAiKeyMissingError(message) || message === "OPENAI_API_KEY_MISSING") {
+            result = await parseAppliedImportImageOcr(file);
+          } else {
+            throw e;
+          }
+        }
         setParseWarnings(result.warnings);
         applyPlan(result.rows);
       } catch (e) {
@@ -94,8 +108,9 @@ export function AppliedImportPanel({
           </h3>
           <p className="mt-2 max-w-2xl text-[0.95rem] text-ink-soft">
             Upload a CSV export from Google Sheets, Excel, or a screenshot of your tracker. We parse
-            company, role, status, and dates — then save them to your applications and hide matching
-            roles from Discover.
+            company, role, status, dates, notes, and materials — then save them to your applications
+            and hide matching roles from Discover. Screenshots work without a server API key (on-device
+            OCR); add OPENAI_API_KEY for higher-accuracy vision parsing.
           </p>
         </div>
         <PinkHoverButton variant="paper" hoverAccent="blue" onClick={() => setOpen((v) => !v)}>
@@ -138,8 +153,10 @@ export function AppliedImportPanel({
           </div>
 
           <p className="text-[0.88rem] text-ink-faint">
-            Expected columns: Company, Title, Status (optional), Date Applied, Posted / Open date,
-            Due / Deadline, Apply URL. Excel users: File → Save As → CSV.
+            Flexible columns supported — Company, Title/Role, Status, Date Applied, Posted date,
+            Deadline, Apply URL, Notes, OA due, and materials flags (resume, cover letter,
+            transcript, GPA). Extra columns are saved into application notes when they do not have a
+            dedicated field.
           </p>
 
           {error && <p className="text-[0.92rem] text-ink">{error}</p>}

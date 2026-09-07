@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { AppliedImportRow } from "@/lib/apply/parseAppliedImport";
+import {
+  normalizeRawImportRow,
+  type AppliedImportRow,
+} from "@/lib/apply/parseAppliedImportFields";
 
 type ImagePayload = {
   imageDataUrl: string;
@@ -7,16 +10,31 @@ type ImagePayload = {
 };
 
 type ExtractedRows = {
-  rows?: Array<{
-    company?: string;
-    title?: string;
-    status?: string;
-    dateApplied?: string | null;
-    postedDate?: string | null;
-    deadline?: string | null;
-    applyUrl?: string | null;
-  }>;
+  rows?: Record<string, unknown>[];
 };
+
+const IMPORT_VISION_SYSTEM = `You extract job application tracker rows from screenshots or photos of spreadsheets.
+Return JSON: {
+  "rows": [{
+    "company": string,
+    "title": string,
+    "status": string,
+    "dateApplied": "YYYY-MM-DD"|null,
+    "postedDate": "YYYY-MM-DD"|null,
+    "deadline": "YYYY-MM-DD"|null,
+    "applyUrl": string|null,
+    "experienceNotes": string|null,
+    "onlineAssessmentDue": "YYYY-MM-DD"|null,
+    "materialsRequired": { "resume": boolean, "coverLetter": boolean, "transcript": boolean, "gpa": boolean }|null
+  }]
+}
+Rules:
+- Extract every visible application row. Skip blank rows.
+- Do NOT invent companies, titles, or dates not visible in the image.
+- Map status to the closest of: Saved, Preparing, Applied, Waiting, Online Assessment, Recruiter Screen, Interviewing, Final Round, Offer, Rejected, Withdrawn.
+- Put any extra per-row notes (referral, location, next step, comments) in experienceNotes.
+- Use ISO dates when possible.
+- Include materialsRequired only when the tracker shows resume/cover letter/transcript/GPA requirements.`;
 
 export const parseAppliedImportImageFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => {
@@ -33,8 +51,12 @@ export const parseAppliedImportImageFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const key = process.env["OPENAI_API_KEY"]?.trim();
     if (!key) {
-      throw new Error("Screenshot parsing requires OPENAI_API_KEY on the server.");
+      throw new Error("OPENAI_API_KEY_MISSING");
     }
+
+    const model = process.env["OPENAI_VISION_MODEL"]?.trim()
+      ?? process.env["OPENAI_PRACTICE_MODEL"]?.trim()
+      ?? "gpt-4o-mini";
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -43,17 +65,11 @@ export const parseAppliedImportImageFn = createServerFn({ method: "POST" })
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env["OPENAI_PRACTICE_MODEL"]?.trim() ?? "gpt-4o-mini",
-        temperature: 0.2,
+        model,
+        temperature: 0.15,
         response_format: { type: "json_object" },
         messages: [
-          {
-            role: "system",
-            content: `You extract job application tracker rows from screenshots or photos of spreadsheets.
-Return JSON: { "rows": [{ "company": string, "title": string, "status": string, "dateApplied": string|null, "postedDate": string|null, "deadline": string|null, "applyUrl": string|null }] }
-Use ISO dates (YYYY-MM-DD) when possible. Status should be one of: Saved, Preparing, Applied, Waiting, Recruiter Screen, Interviewing, Final Round, Offer, Rejected, Withdrawn.
-Skip blank rows. Do not invent companies or titles not visible in the image.`,
-          },
+          { role: "system", content: IMPORT_VISION_SYSTEM },
           {
             role: "user",
             content: [
@@ -63,13 +79,13 @@ Skip blank rows. Do not invent companies or titles not visible in the image.`,
               },
               {
                 type: "image_url",
-                image_url: { url: data.imageDataUrl },
+                image_url: { url: data.imageDataUrl, detail: "high" },
               },
             ],
           },
         ],
       }),
-      signal: AbortSignal.timeout(55_000),
+      signal: AbortSignal.timeout(90_000),
     });
 
     if (!res.ok) {
@@ -84,40 +100,12 @@ Skip blank rows. Do not invent companies or titles not visible in the image.`,
     if (!content) return { rows: [] as AppliedImportRow[], warnings: ["No rows extracted."] };
 
     const parsed = JSON.parse(content) as ExtractedRows;
-    const rows: AppliedImportRow[] = (parsed.rows ?? [])
-      .map((r) => ({
-        company: String(r.company ?? "").trim(),
-        title: String(r.title ?? "").trim(),
-        status: mapStatus(r.status),
-        dateApplied: r.dateApplied ?? null,
-        postedDate: r.postedDate ?? null,
-        deadline: r.deadline ?? null,
-        applyUrl: r.applyUrl ?? null,
-      }))
-      .filter((r) => r.company && r.title);
+    const rows = (parsed.rows ?? [])
+      .map((row) => normalizeRawImportRow(row))
+      .filter((row): row is AppliedImportRow => row != null);
 
     return {
       rows,
       warnings: rows.length === 0 ? ["No application rows found in that image."] : [],
     };
   });
-
-function mapStatus(raw: string | undefined): AppliedImportRow["status"] {
-  if (!raw?.trim()) return "Saved";
-  const key = raw.trim().toLowerCase();
-  const map: Record<string, AppliedImportRow["status"]> = {
-    saved: "Saved",
-    preparing: "Preparing",
-    applied: "Applied",
-    submitted: "Applied",
-    waiting: "Waiting",
-    "recruiter screen": "Recruiter Screen",
-    interviewing: "Interviewing",
-    interview: "Interviewing",
-    "final round": "Final Round",
-    offer: "Offer",
-    rejected: "Rejected",
-    withdrawn: "Withdrawn",
-  };
-  return map[key] ?? "Saved";
-}

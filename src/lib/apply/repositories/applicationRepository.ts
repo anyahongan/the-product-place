@@ -11,6 +11,7 @@ import { readJson, writeJson } from "@/lib/recruiting/storage";
 import { PLACEHOLDER_CONTACTS } from "@/lib/apply/placeholderContacts";
 import { buildRoleDedupeKey } from "@/lib/apply/normalization/dedupe";
 import type { AppliedImportRow } from "@/lib/apply/parseAppliedImport";
+import { applyImportRowToRecord } from "@/lib/apply/parseAppliedImportFields";
 
 const STORAGE_KEY = "tpp.apply.applications.v1";
 const SAVED_KEY = "tpp.apply.saved.v1";
@@ -111,7 +112,7 @@ export function createImportedApplicationRecord(
   const status = row.status;
   const jobId = matchedJob?.id ?? importedJobId(row.company, row.title);
   const event: StatusEvent = { status, timestamp: now };
-  return {
+  const created: ApplicationRecord = {
     applicationId: `app-${jobId}-${Date.now()}`,
     jobId,
     companyId: companyId ?? companyIdFromName(row.company),
@@ -122,11 +123,19 @@ export function createImportedApplicationRecord(
       (status === "Applied" || status === "Waiting" ? now.slice(0, 10) : null),
     currentStatus: status,
     statusHistory: [event],
-    materialsRequired: { ...DEFAULT_MATERIALS_REQUIRED },
+    materialsRequired: row.materialsRequired
+      ? { ...DEFAULT_MATERIALS_REQUIRED, ...row.materialsRequired }
+      : { ...DEFAULT_MATERIALS_REQUIRED },
     resumeUsed: null,
     coverLetterUsed: null,
-    onlineAssessment: { ...DEFAULT_ONLINE_ASSESSMENT },
-    experienceNotes: "",
+    onlineAssessment: row.onlineAssessmentDue
+      ? {
+          dueDate: row.onlineAssessmentDue,
+          completed: false,
+          completedAt: null,
+        }
+      : { ...DEFAULT_ONLINE_ASSESSMENT },
+    experienceNotes: row.experienceNotes ?? "",
     applyUrl: row.applyUrl ?? matchedJob?.applicationUrl ?? null,
     sourceUrl: matchedJob?.sourceUrl ?? null,
     autoQueued: false,
@@ -134,6 +143,8 @@ export function createImportedApplicationRecord(
     postedDate: row.postedDate ?? matchedJob?.postedDate ?? null,
     deadline: row.deadline ?? matchedJob?.deadline ?? null,
   };
+
+  return created;
 }
 
 export function mergeImportedIntoApp(
@@ -143,6 +154,7 @@ export function mergeImportedIntoApp(
 ): ApplicationRecord {
   const next =
     existing.currentStatus !== row.status ? appendStatus(existing, row.status) : existing;
+  const merged = applyImportRowToRecord(next, row);
   return {
     ...next,
     company: row.company,
@@ -151,6 +163,9 @@ export function mergeImportedIntoApp(
     applyUrl: row.applyUrl ?? next.applyUrl,
     postedDate: row.postedDate ?? matchedJob?.postedDate ?? next.postedDate ?? null,
     deadline: row.deadline ?? matchedJob?.deadline ?? next.deadline ?? null,
+    experienceNotes: merged.experienceNotes,
+    materialsRequired: merged.materialsRequired,
+    onlineAssessment: merged.onlineAssessment,
   };
 }
 

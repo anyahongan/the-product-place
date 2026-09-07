@@ -1,6 +1,7 @@
 import { buildRoleDedupeKey, normalizeText } from "@/lib/apply/normalization/dedupe";
 import type { ApplicationRecord, JobListingView } from "@/lib/apply/types";
 import type { AppliedImportRow } from "@/lib/apply/parseAppliedImport";
+import { importRowDiffersFromApp } from "@/lib/apply/parseAppliedImportFields";
 
 export type AppliedImportPreviewRow = {
   row: AppliedImportRow;
@@ -63,12 +64,12 @@ export function planAppliedImport(
     const matchedJob = findCatalogJob(row, jobs);
     const existing = findExistingApp(row, matchedJob, apps);
 
-    if (existing && existing.currentStatus === row.status) {
+    if (existing && !importRowDiffersFromApp(existing, row)) {
       preview.push({
         row,
         action: "skip",
         matchedJobId: matchedJob?.id ?? existing.jobId,
-        reason: "Already tracked with the same status",
+        reason: "Already tracked with the same details",
       });
       skipCount++;
       continue;
@@ -79,7 +80,7 @@ export function planAppliedImport(
         row,
         action: "update",
         matchedJobId: matchedJob?.id ?? existing.jobId,
-        reason: `Update status to ${row.status}`,
+        reason: `Update imported fields${existing.currentStatus !== row.status ? ` · status → ${row.status}` : ""}`,
       });
       updateCount++;
       records.push({ row, matchedJob, existing });
