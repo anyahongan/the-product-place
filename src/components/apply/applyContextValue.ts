@@ -14,6 +14,7 @@ type AppsSlice = Pick<
   | "addToAutoQueue"
   | "removeFromAutoQueue"
   | "setStatus"
+  | "importAppliedApplications"
 >;
 
 export type ApplyContextValue = AppsSlice & ReturnType<typeof useProductJobs>;

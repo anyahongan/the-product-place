@@ -21,6 +21,7 @@ import {
   matchPercentForSort,
   profileHasMatchInputs,
 } from "@/lib/matching";
+import { buildRoleDedupeKey } from "@/lib/apply/normalization/dedupe";
 import { PROFILE_UPDATED_EVENT } from "@/lib/profile/profileEvents";
 import { loadProfileBundle } from "@/lib/profile/profileRepository";
 import type { ApplicationMode as Mode, JobFiltersState } from "@/types/apply";
@@ -126,12 +127,32 @@ export function ApplyDiscover({
     });
   }, [jobs, profileBundle, profileReady]);
 
-  const visible = useMemo(
-    () => filterAndSortJobs(matchedJobs, filters, savedIds),
-    [matchedJobs, filters, savedIds],
-  );
-  const activeFilterCount = countActiveFilters(filters);
+  const trackedRoleKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const app of apps) {
+      keys.add(buildRoleDedupeKey(app.company, app.title));
+    }
+    return keys;
+  }, [apps]);
+
   const appliedJobIds = useMemo(() => new Set(apps.map((a) => a.jobId)), [apps]);
+
+  const discoverJobs = useMemo(
+    () =>
+      matchedJobs.filter(
+        (job) =>
+          !appliedJobIds.has(job.id) &&
+          !trackedRoleKeys.has(buildRoleDedupeKey(job.company, job.title)),
+      ),
+    [matchedJobs, appliedJobIds, trackedRoleKeys],
+  );
+
+  const visible = useMemo(
+    () => filterAndSortJobs(discoverJobs, filters, savedIds),
+    [discoverJobs, filters, savedIds],
+  );
+
+  const activeFilterCount = countActiveFilters(filters);
 
   const queuedJobs = useMemo(
     () =>
@@ -286,7 +307,10 @@ export function ApplyDiscover({
         {status === "ready" && (
           <>
             <p className="tag text-ink-soft">
-              Showing {visible.length} of {jobs.length} product roles
+              Showing {visible.length} of {discoverJobs.length} product roles
+              {apps.length > 0 && discoverJobs.length < matchedJobs.length
+                ? ` · ${matchedJobs.length - discoverJobs.length} already in your tracker`
+                : ""}
               {activeFilterCount
                 ? ` · ${activeFilterCount} filter group${activeFilterCount === 1 ? "" : "s"}`
                 : ""}
@@ -301,11 +325,13 @@ export function ApplyDiscover({
               <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
                 <p className="font-display text-[1.4rem] font-black uppercase">No roles match</p>
                 <p className="mt-2 text-ink-soft">
-                  {jobs.length === 0
-                    ? "No product-relevant internships were found in the current source."
+                  {discoverJobs.length === 0
+                    ? apps.length > 0
+                      ? "Every role in the catalog is already in your tracker. Import more or clear filters."
+                      : "No product-relevant internships were found in the current source."
                     : "Loosen a filter or clear the stack."}
                 </p>
-                {jobs.length > 0 && (
+                {discoverJobs.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setFilters(defaultFilters)}

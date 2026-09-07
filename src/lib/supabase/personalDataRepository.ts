@@ -101,7 +101,12 @@ export async function loadPersonalFromSupabase(userId: string): Promise<{
 
   const apps: ApplicationRecord[] = appRows.map((a) => {
     const snapshot = a.job_snapshot as
-      | { companyId?: string; catalogCompanyId?: string }
+      | {
+          companyId?: string;
+          catalogCompanyId?: string;
+          postedDate?: string | null;
+          deadline?: string | null;
+        }
       | null;
     // Prefer snapshot UI/legacy company id (co-*) so Network deep-links keep working.
     // applications.company_id may be the shared catalog UUID — do not use it as Network companyId.
@@ -126,6 +131,8 @@ export async function loadPersonalFromSupabase(userId: string): Promise<{
       sourceUrl: (a.source_url as string) ?? null,
       autoQueued: Boolean(a.auto_queued),
       tone: (a.tone as ToneName) || "blue",
+      postedDate: snapshot?.postedDate ?? null,
+      deadline: snapshot?.deadline ?? null,
     };
   });
 

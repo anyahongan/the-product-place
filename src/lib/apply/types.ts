@@ -58,6 +58,10 @@ export type ApplicationRecord = {
   sourceUrl: string | null;
   autoQueued: boolean;
   tone: ToneName;
+  /** Role posted/open date (from catalog or import). */
+  postedDate?: string | null;
+  /** Application deadline (from catalog or import). */
+  deadline?: string | null;
 };
 
 export type JobListingView = {

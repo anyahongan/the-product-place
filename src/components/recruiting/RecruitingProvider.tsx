@@ -5,15 +5,18 @@ import { INTERVIEW_ELIGIBLE_STATUSES } from "@/lib/apply/types";
 import {
   appendStatus,
   createAppliedRecord,
+  createImportedApplicationRecord,
   findApplicationByJobId,
   listApplications,
   listAutoQueueIds,
   listSavedJobIds,
+  mergeImportedIntoApp,
   saveApplications,
   saveAutoQueueIds,
   saveSavedJobIds,
   upsertApplication,
 } from "@/lib/apply/repositories/applicationRepository";
+import type { AppliedImportPlan } from "@/lib/apply/planAppliedImport";
 import type { Company, ContactApplicationLink } from "@/types/recruiting";
 import type { NetworkContact, NetworkNote } from "@/types/network";
 import type { LinkedInImportPlan } from "@/lib/network/mergeLinkedInConnections";
@@ -35,6 +38,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { loadPersonalFromSupabase } from "@/lib/supabase/personalDataRepository";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
+  importAppliedApplicationsBatch,
   markJobApplied,
   persistContactChange,
   persistNotesDiff,
@@ -478,6 +482,54 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     [links, persistenceMode, user],
   );
 
+  const importAppliedApplications = useCallback(
+    async (plan: AppliedImportPlan) => {
+      let nextApps = apps;
+      let nextSaved = new Set(savedIds);
+      let nextCompanies = companies;
+
+      for (const { row, matchedJob, existing } of plan.records) {
+        const { companies: updatedCompanies, company } = upsertCompanyByName(
+          nextCompanies,
+          row.company,
+          matchedJob?.tone === "pink" ? "blue" : matchedJob?.tone ?? "blue",
+        );
+        nextCompanies = updatedCompanies;
+
+        const record = existing
+          ? mergeImportedIntoApp(existing, row, matchedJob)
+          : createImportedApplicationRecord(row, matchedJob, company.id);
+
+        nextApps = upsertApplication(nextApps, { ...record, companyId: company.id });
+        if (matchedJob) nextSaved.add(matchedJob.id);
+      }
+
+      setCompanies(nextCompanies);
+      setApps(nextApps);
+      setSavedIds(nextSaved);
+      saveApplications(nextApps);
+      saveSavedJobIds([...nextSaved]);
+
+      if (persistenceMode !== "supabase" || !user) return;
+
+      try {
+        const synced = await importAppliedApplicationsBatch(user.id, plan.records);
+        setApps((prev) => {
+          let merged = prev;
+          for (const app of synced) {
+            merged = upsertApplication(merged, app);
+          }
+          return merged;
+        });
+        setPersistError(null);
+      } catch (e) {
+        setPersistError(e instanceof Error ? e.message : "Application import failed to sync");
+        throw e;
+      }
+    },
+    [apps, companies, persistenceMode, savedIds, user],
+  );
+
   const interviewingApps = useMemo(
     () => apps.filter((a) => INTERVIEW_ELIGIBLE_STATUSES.includes(a.currentStatus)),
     [apps],
@@ -529,6 +581,7 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     addCompanyToCatalog,
     ensureCompanyForJob,
     importLinkedInConnections,
+    importAppliedApplications,
   };
 
   return (

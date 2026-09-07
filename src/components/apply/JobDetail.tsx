@@ -6,6 +6,8 @@ import { EMPLOYMENT_TYPE_LABELS, formatShortDate, WORK_MODE_LABELS } from "@/dat
 import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
 import { modeCta } from "@/components/apply/modeCta";
 import { generateMaterialsForJob } from "@/lib/apply/generateMaterialsForJob";
+import type { ApplyMaterialTemplates } from "@/lib/apply/applyMaterialTemplates";
+import { plainJobDescription } from "@/lib/apply/plainJobText";
 import type { ApplyMaterialsResult } from "@/lib/apply/generateApplyMaterials";
 import { cn } from "@/lib/utils";
 import type { ApplicationMode } from "@/types/apply";
@@ -159,8 +161,9 @@ export function JobDetail({
 
               <section className="mt-6">
                 <h3 className="font-display text-[1.15rem] font-black uppercase">Description</h3>
-                <p className="mt-2 text-[0.98rem] leading-relaxed text-ink-soft">
-                  {job.description}
+                <p className="mt-2 whitespace-pre-wrap text-[0.98rem] leading-relaxed text-ink-soft">
+                  {plainJobDescription(job.description) ||
+                    "No description available. Open the employer link for full details."}
                 </p>
               </section>
 
@@ -212,11 +215,24 @@ export function JobDetail({
                 materials={materials}
                 busy={materialsBusy}
                 error={materialsError}
-                onGenerate={() => {
+                userId={userId}
+                onGenerate={(templateState: ApplyMaterialTemplates) => {
                   if (!job) return;
+                  if (!profileBundle) {
+                    setMaterialsError("Complete your Profile first to generate materials.");
+                    return;
+                  }
                   setMaterialsBusy(true);
                   setMaterialsError(null);
-                  void generateMaterialsForJob({ userId, profileBundle, job })
+                  void generateMaterialsForJob({
+                    userId,
+                    profileBundle,
+                    job,
+                    templates: {
+                      resumeTemplate: templateState.resumeTemplate,
+                      coverLetterTemplate: templateState.coverLetterTemplate,
+                    },
+                  })
                     .then(setMaterials)
                     .catch((e) =>
                       setMaterialsError(

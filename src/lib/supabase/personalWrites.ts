@@ -3,7 +3,13 @@ import type { ApplicationLifecycleStatus, ApplicationRecord, JobListingView } fr
 import type { NetworkContact, NetworkNote, TimelineEvent } from "@/types/network";
 import type { ContactApplicationLink } from "@/types/recruiting";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { appendStatus, createAppliedRecord } from "@/lib/apply/repositories/applicationRepository";
+import {
+  appendStatus,
+  createAppliedRecord,
+  createImportedApplicationRecord,
+  mergeImportedIntoApp,
+} from "@/lib/apply/repositories/applicationRepository";
+import type { AppliedImportPlan } from "@/lib/apply/planAppliedImport";
 
 function client(): SupabaseClient {
   const sb = getSupabaseBrowserClient();
@@ -170,6 +176,8 @@ export async function markJobApplied(
         jobId: job.id,
         location: job.location,
         productRole: job.productRole,
+        postedDate: job.postedDate ?? null,
+        deadline: job.deadline ?? null,
       },
     })
     .select("id")
@@ -185,6 +193,111 @@ export async function markJobApplied(
   if (evErr) throw evErr;
 
   return { ...draft, applicationId: data.id as string };
+}
+
+function jobSnapshotFromRecord(
+  app: ApplicationRecord,
+  matchedJob: JobListingView | null,
+): Record<string, unknown> {
+  return {
+    companyId: app.companyId,
+    jobId: app.jobId,
+    postedDate: app.postedDate ?? matchedJob?.postedDate ?? null,
+    deadline: app.deadline ?? matchedJob?.deadline ?? null,
+    ...(matchedJob
+      ? {
+          catalogCompanyId: matchedJob.catalogCompanyId ?? null,
+          location: matchedJob.location,
+          productRole: matchedJob.productRole,
+        }
+      : {}),
+  };
+}
+
+export async function importAppliedApplicationsBatch(
+  userId: string,
+  records: AppliedImportPlan["records"],
+): Promise<ApplicationRecord[]> {
+  const synced: ApplicationRecord[] = [];
+  const sb = client();
+  const now = new Date().toISOString();
+
+  for (const { row, matchedJob, existing } of records) {
+    const draft = existing
+      ? mergeImportedIntoApp(existing, row, matchedJob)
+      : createImportedApplicationRecord(row, matchedJob);
+
+    if (existing && isUuid(existing.applicationId)) {
+      const { error } = await sb
+        .from("applications")
+        .update({
+          current_status: draft.currentStatus,
+          date_applied: draft.dateApplied,
+          company_name: draft.company,
+          title: draft.title,
+          apply_url: draft.applyUrl,
+          source_url: draft.sourceUrl,
+          updated_at: now,
+          job_snapshot: jobSnapshotFromRecord(draft, matchedJob),
+        })
+        .eq("id", existing.applicationId)
+        .eq("user_id", userId);
+      if (error) throw error;
+
+      if (existing.currentStatus !== draft.currentStatus) {
+        const { error: evErr } = await sb.from("application_status_events").insert({
+          user_id: userId,
+          application_id: existing.applicationId,
+          status: draft.currentStatus,
+          occurred_at: now,
+        });
+        if (evErr) throw evErr;
+      }
+
+      synced.push({ ...draft, applicationId: existing.applicationId });
+    } else {
+      const catalogCompanyId =
+        matchedJob && isUuid(matchedJob.catalogCompanyId) ? matchedJob.catalogCompanyId! : null;
+      const { data, error } = await sb
+        .from("applications")
+        .insert({
+          user_id: userId,
+          job_id: matchedJob && isUuid(matchedJob.id) ? matchedJob.id : null,
+          company_id: catalogCompanyId,
+          legacy_job_id: draft.jobId,
+          company_name: draft.company,
+          title: draft.title,
+          date_applied: draft.dateApplied,
+          current_status: draft.currentStatus,
+          apply_url: draft.applyUrl,
+          source_url: draft.sourceUrl,
+          auto_queued: false,
+          tone: draft.tone,
+          job_snapshot: jobSnapshotFromRecord(draft, matchedJob),
+        })
+        .select("id")
+        .single();
+      if (error || !data) throw error ?? new Error("Failed to import application");
+
+      for (const ev of draft.statusHistory) {
+        const { error: evErr } = await sb.from("application_status_events").insert({
+          user_id: userId,
+          application_id: data.id,
+          status: ev.status,
+          occurred_at: ev.timestamp,
+        });
+        if (evErr) throw evErr;
+      }
+
+      synced.push({ ...draft, applicationId: data.id as string });
+    }
+
+    if (matchedJob && isUuid(matchedJob.id)) {
+      await saveJob(userId, matchedJob.id, false);
+    }
+  }
+
+  return synced;
 }
 
 export async function updateApplicationStatus(

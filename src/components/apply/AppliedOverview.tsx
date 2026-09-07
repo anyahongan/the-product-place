@@ -5,6 +5,7 @@ import {
   AppliedApplicationCard,
   AppliedStatusFilters,
 } from "@/components/apply/AppliedApplication";
+import { AppliedImportPanel } from "@/components/apply/AppliedImportPanel";
 import { useApplyContext } from "@/components/apply/useApplyContext";
 import type { ApplicationLifecycleStatus } from "@/lib/apply/types";
 
@@ -13,9 +14,12 @@ export function AppliedOverview({
 }: {
   focusApplicationId?: string;
 }) {
-  const { apps, stats, setStatus, hydrated } = useApplyContext();
+  const { apps, stats, setStatus, hydrated, jobs, importAppliedApplications } = useApplyContext();
   const [filter, setFilter] = useState<"all" | ApplicationLifecycleStatus>("all");
   const [openId, setOpenId] = useState<string | null>(focusApplicationId ?? null);
+  const [importBusy, setImportBusy] = useState(false);
+
+  const jobById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
 
   useEffect(() => {
     if (focusApplicationId) setOpenId(focusApplicationId);
@@ -76,6 +80,22 @@ export function AppliedOverview({
 
       <AppliedStatusFilters value={filter} onChange={setFilter} counts={counts} />
 
+      <Reveal from="up" distance={24} delay={0.04}>
+        <AppliedImportPanel
+          jobs={jobs}
+          apps={apps}
+          busy={importBusy}
+          onImport={async (plan) => {
+            setImportBusy(true);
+            try {
+              await importAppliedApplications(plan);
+            } finally {
+              setImportBusy(false);
+            }
+          }}
+        />
+      </Reveal>
+
       <div className="space-y-5">
         {!hydrated ? (
           <Sheet tone="paper-2" shadow="hard-sm" className="px-6 py-10">
@@ -93,15 +113,20 @@ export function AppliedOverview({
             </p>
           </Sheet>
         ) : (
-          visible.map((app) => (
-            <AppliedApplicationCard
-              key={app.applicationId}
-              app={app}
-              expanded={openId === app.applicationId}
-              onToggle={() => setOpenId(openId === app.applicationId ? null : app.applicationId)}
-              onStatusChange={(status) => setStatus(app.applicationId, status)}
-            />
-          ))
+          visible.map((app) => {
+            const job = jobById.get(app.jobId);
+            return (
+              <AppliedApplicationCard
+                key={app.applicationId}
+                app={app}
+                postedDate={job?.postedDate ?? app.postedDate}
+                deadline={job?.deadline ?? app.deadline}
+                expanded={openId === app.applicationId}
+                onToggle={() => setOpenId(openId === app.applicationId ? null : app.applicationId)}
+                onStatusChange={(status) => setStatus(app.applicationId, status)}
+              />
+            );
+          })
         )}
       </div>
     </div>

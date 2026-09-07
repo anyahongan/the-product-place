@@ -12,6 +12,7 @@ export type ApplyMaterialsInput = {
     productRole: string;
     responsibilities: string[];
   };
+  templates?: ApplyMaterialsTemplates;
 };
 
 export type ApplyMaterialsResult = {
@@ -19,6 +20,14 @@ export type ApplyMaterialsResult = {
   coverLetterText: string;
   tailoringNotes: string[];
   source: "ai" | "coach";
+  /** LLM self-grade for template-based cover letters (0–10). */
+  coverLetterScore?: number | null;
+  gradingNotes?: string[];
+};
+
+export type ApplyMaterialsTemplates = {
+  resumeTemplate?: string | null;
+  coverLetterTemplate?: string | null;
 };
 
 function displayName(profile: ApplyMaterialsInput["profile"]): string {
@@ -85,7 +94,12 @@ export function generateApplyMaterialsLocally(input: ApplyMaterialsInput): Apply
     input.standardAnswers.find((a) => /why|interest|company/i.test(a.label))?.answer.trim() ?? "";
   const introParagraph = whyAnswer
     ? whyAnswer
-    : `I am excited to apply for the ${input.job.title} role at ${input.job.company}. My background in ${input.profile.major || "product"} and hands-on product work aligns with the responsibilities listed in the posting.`;
+    : input.templates?.coverLetterTemplate?.trim()
+      ? input.templates.coverLetterTemplate
+          .replaceAll("[COMPANY]", input.job.company)
+          .replaceAll("[ROLE]", input.job.title)
+          .replaceAll("[TITLE]", input.job.title)
+      : `I am excited to apply for the ${input.job.title} role at ${input.job.company}. My background in ${input.profile.major || "product"} and hands-on product work aligns with the responsibilities listed in the posting.`;
 
   const proofBullets = ranked
     .flatMap((exp) =>
@@ -96,28 +110,43 @@ export function generateApplyMaterialsLocally(input: ApplyMaterialsInput): Apply
     )
     .slice(0, 3);
 
-  const coverLetterLines = [
-    `${input.job.company} Hiring Team`,
-    "",
-    `Dear ${input.job.company} team,`,
-    "",
-    introParagraph,
-    "",
-    ...(proofBullets.length
-      ? ["Relevant highlights from my experience:", ...proofBullets, ""]
-      : []),
-    `I would welcome the opportunity to contribute to ${input.job.title} and learn from the team.`,
-    "",
-    "Thank you for your consideration,",
-    name,
-  ];
+  if (input.templates?.resumeTemplate?.trim()) {
+    resumeLines.length = 0;
+    resumeLines.push(input.templates.resumeTemplate.trim());
+  }
+
+  const coverLetterLines = input.templates?.coverLetterTemplate?.trim()
+    ? [
+        input.templates.coverLetterTemplate
+          .replaceAll("[COMPANY]", input.job.company)
+          .replaceAll("[ROLE]", input.job.title)
+          .replaceAll("[TITLE]", input.job.title),
+      ]
+    : [
+        `${input.job.company} Hiring Team`,
+        "",
+        `Dear ${input.job.company} team,`,
+        "",
+        introParagraph,
+        "",
+        ...(proofBullets.length
+          ? ["Relevant highlights from my experience:", ...proofBullets, ""]
+          : []),
+        `I would welcome the opportunity to contribute to ${input.job.title} and learn from the team.`,
+        "",
+        "Thank you for your consideration,",
+        name,
+      ];
 
   const tailoringNotes = [
     `Prioritized ${ranked.length} experience${ranked.length === 1 ? "" : "s"} for ${input.job.productRole} at ${input.job.company}.`,
+    input.templates?.coverLetterTemplate?.trim()
+      ? "Coach draft from your cover letter template. Connect OPENAI_API_KEY for AI grading (9/10 minimum)."
+      : null,
     input.networkInsights.length
       ? `Included ${input.networkInsights.length} network insight${input.networkInsights.length === 1 ? "" : "s"} marked for application materials.`
       : "Add Network notes marked for application materials to enrich future drafts.",
-  ];
+  ].filter(Boolean) as string[];
 
   return {
     resumeText: resumeLines.join("\n"),

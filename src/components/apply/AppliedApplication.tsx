@@ -55,11 +55,15 @@ function toProgress(app: ApplicationRecord): {
 
 export function AppliedApplicationCard({
   app,
+  postedDate,
+  deadline,
   expanded,
   onToggle,
   onStatusChange,
 }: {
   app: ApplicationRecord;
+  postedDate?: string | null;
+  deadline?: string | null;
   expanded: boolean;
   onToggle: () => void;
   onStatusChange: (status: ApplicationLifecycleStatus) => void;
@@ -100,6 +104,12 @@ export function AppliedApplicationCard({
               {app.company}
             </h3>
             <p className="mt-1 text-[0.98rem] text-ink-soft">{app.title}</p>
+            {(postedDate || deadline) && (
+              <p className="tag mt-2 text-ink-faint">
+                {postedDate ? `Posted ${formatShortDate(postedDate)}` : "Posted date unknown"}
+                {deadline ? ` · Due ${formatShortDate(deadline)}` : ""}
+              </p>
+            )}
             <p className="tag mt-2 text-ink-faint">
               {app.dateApplied
                 ? `Applied ${formatShortDate(app.dateApplied)}`

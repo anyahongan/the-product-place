@@ -21,6 +21,7 @@ export function ApplyProvider({ children }: { children: ReactNode }) {
         addToAutoQueue: recruiting.addToAutoQueue,
         removeFromAutoQueue: recruiting.removeFromAutoQueue,
         setStatus: recruiting.setStatus,
+        importAppliedApplications: recruiting.importAppliedApplications,
       }}
     >
       {children}

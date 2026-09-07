@@ -4,6 +4,7 @@ import type { JobListingView } from "@/lib/apply/types";
 import type { Company, ContactApplicationLink } from "@/types/recruiting";
 import type { NetworkContact, NetworkNote } from "@/types/network";
 import type { LinkedInImportPlan } from "@/lib/network/mergeLinkedInConnections";
+import type { AppliedImportPlan } from "@/lib/apply/planAppliedImport";
 
 export type RecruitingContextValue = {
   apps: ApplicationRecord[];
@@ -35,6 +36,7 @@ export type RecruitingContextValue = {
   addCompanyToCatalog: (company: Company) => void;
   ensureCompanyForJob: (job: JobListingView) => string;
   importLinkedInConnections: (plan: LinkedInImportPlan) => Promise<void>;
+  importAppliedApplications: (plan: AppliedImportPlan) => Promise<void>;
 };
 
 export const RecruitingContext = createContext<RecruitingContextValue | null>(null);

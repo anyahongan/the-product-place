@@ -13,6 +13,7 @@ import {
   applyBlueSectionHeader,
 } from "@/components/apply/applyUi";
 import { generateMaterialsForJob } from "@/lib/apply/generateMaterialsForJob";
+import type { ApplyMaterialTemplates } from "@/lib/apply/applyMaterialTemplates";
 import type { ApplyMaterialsResult } from "@/lib/apply/generateApplyMaterials";
 import { buildQuickApplyPacket } from "@/lib/apply/quickApplyPacket";
 import { cn } from "@/lib/utils";
@@ -178,10 +179,23 @@ export function QuickApplyPanel({
               materials={materials}
               busy={materialsBusy}
               error={materialsError}
-              onGenerate={() => {
+              userId={userId}
+              onGenerate={(templateState: ApplyMaterialTemplates) => {
+                if (!profileBundle) {
+                  setMaterialsError("Complete your Profile first to generate materials.");
+                  return;
+                }
                 setMaterialsBusy(true);
                 setMaterialsError(null);
-                void generateMaterialsForJob({ userId, profileBundle, job })
+                void generateMaterialsForJob({
+                  userId,
+                  profileBundle,
+                  job,
+                  templates: {
+                    resumeTemplate: templateState.resumeTemplate,
+                    coverLetterTemplate: templateState.coverLetterTemplate,
+                  },
+                })
                   .then(setMaterials)
                   .catch((e) =>
                     setMaterialsError(e instanceof Error ? e.message : "Could not generate materials"),

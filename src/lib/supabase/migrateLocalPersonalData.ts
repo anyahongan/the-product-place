@@ -159,6 +159,8 @@ async function upsertApplication(
     job_snapshot: {
       companyId: app.companyId,
       applicationId: app.applicationId,
+      postedDate: app.postedDate ?? null,
+      deadline: app.deadline ?? null,
     },
     updated_at: new Date().toISOString(),
   };
