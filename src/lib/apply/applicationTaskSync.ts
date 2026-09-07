@@ -45,3 +45,9 @@ export function completeOnlineAssessmentTask(applicationId: string): void {
   const tasks = readTasks().map((t) => (t.id === taskId ? { ...t, done: true } : t));
   writeTasks(tasks);
 }
+
+export function clearApplicationTasks(applicationId: string): void {
+  const taskId = `${OA_TASK_PREFIX}${applicationId}`;
+  const tasks = readTasks().filter((t) => t.id !== taskId);
+  writeTasks(tasks);
+}

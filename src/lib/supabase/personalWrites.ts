@@ -226,10 +226,26 @@ export async function persistApplicationFields(
   const { error } = await client()
     .from("applications")
     .update({
+      company_name: app.company,
+      title: app.title,
+      date_applied: app.dateApplied,
       job_snapshot: jobSnapshotFromRecord(app, null),
       updated_at: new Date().toISOString(),
     })
     .eq("id", app.applicationId)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+export async function deleteApplicationRecord(
+  userId: string,
+  applicationId: string,
+): Promise<void> {
+  if (!isUuid(applicationId)) return;
+  const { error } = await client()
+    .from("applications")
+    .delete()
+    .eq("id", applicationId)
     .eq("user_id", userId);
   if (error) throw error;
 }

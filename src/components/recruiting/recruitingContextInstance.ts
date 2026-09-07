@@ -33,10 +33,16 @@ export type RecruitingContextValue = {
     patch: Partial<
       Pick<
         ApplicationRecord,
-        "materialsRequired" | "onlineAssessment" | "experienceNotes"
+        | "materialsRequired"
+        | "onlineAssessment"
+        | "experienceNotes"
+        | "company"
+        | "title"
+        | "dateApplied"
       >
     >,
   ) => void;
+  deleteApplication: (applicationId: string) => void;
   updateContact: (next: NetworkContact) => void;
   setContacts: (
     next: NetworkContact[] | ((prev: NetworkContact[]) => NetworkContact[]),

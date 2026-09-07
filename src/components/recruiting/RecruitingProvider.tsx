@@ -19,6 +19,7 @@ import {
 } from "@/lib/apply/repositories/applicationRepository";
 import {
   completeOnlineAssessmentTask,
+  clearApplicationTasks,
   syncOnlineAssessmentTask,
 } from "@/lib/apply/applicationTaskSync";
 import type { AppliedImportPlan } from "@/lib/apply/planAppliedImport";
@@ -43,6 +44,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { loadPersonalFromSupabase } from "@/lib/supabase/personalDataRepository";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
+  deleteApplicationRecord,
   importAppliedApplicationsBatch,
   markJobApplied,
   persistApplicationFields,
@@ -346,7 +348,15 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     (
       applicationId: string,
       patch: Partial<
-        Pick<ApplicationRecord, "materialsRequired" | "onlineAssessment" | "experienceNotes">
+        Pick<
+          ApplicationRecord,
+          | "materialsRequired"
+          | "onlineAssessment"
+          | "experienceNotes"
+          | "company"
+          | "title"
+          | "dateApplied"
+        >
       >,
     ) => {
       setApps((prev) => {
@@ -374,6 +384,39 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
         .then(() => setPersistError(null))
         .catch((e) => {
           setPersistError(e instanceof Error ? e.message : "Failed to save application details");
+        });
+    },
+    [apps, persistenceMode, user],
+  );
+
+  const deleteApplication = useCallback(
+    (applicationId: string) => {
+      const snapshot = apps;
+      const nextApps = apps.filter((a) => a.applicationId !== applicationId);
+      setApps(nextApps);
+      saveApplications(nextApps);
+      clearApplicationTasks(applicationId);
+      setContacts((prev) =>
+        prev.map((c) => ({
+          ...c,
+          relatedApplicationIds: c.relatedApplicationIds.filter((id) => id !== applicationId),
+        })),
+      );
+      setLinks((prev) => prev.filter((l) => l.applicationId !== applicationId));
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.applicationId === applicationId ? { ...n, applicationId: undefined } : n,
+        ),
+      );
+
+      if (persistenceMode !== "supabase" || !user) return;
+
+      void deleteApplicationRecord(user.id, applicationId)
+        .then(() => setPersistError(null))
+        .catch((e) => {
+          setApps(snapshot);
+          setPersistError(e instanceof Error ? e.message : "Failed to delete application");
+          throw e;
         });
     },
     [apps, persistenceMode, user],
@@ -596,6 +639,7 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     removeFromApplyList,
     setStatus,
     updateApplication,
+    deleteApplication,
     updateContact,
     setContacts: setContactsState,
     setNotes: setNotesState,

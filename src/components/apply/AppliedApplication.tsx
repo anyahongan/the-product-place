@@ -78,6 +78,7 @@ export function AppliedApplicationCard({
   onToggle,
   onStatusChange,
   onUpdateApplication,
+  onDelete,
   openOaOnMount,
   onOaModalOpened,
 }: {
@@ -94,12 +95,14 @@ export function AppliedApplicationCard({
       Pick<ApplicationRecord, "materialsRequired" | "onlineAssessment" | "experienceNotes">
     >,
   ) => void;
+  onDelete: () => void;
 }) {
   const reduced = useReducedMotion();
   const tone = cardTone(app.tone);
   const progress = toProgress(app);
   const { notes, contacts } = useRecruiting();
   const [oaOpen, setOaOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [notesDraft, setNotesDraft, clearNotesDraft] = usePageDraft(
     `apply:notes:${app.applicationId}`,
     app.experienceNotes,
@@ -153,11 +156,51 @@ export function AppliedApplicationCard({
       >
         <Tape className="-left-3 top-6" color={tone} angle={-88} width={52} height={22} />
 
+        <div className="absolute right-4 top-4 z-10 flex items-center gap-1">
+          {confirmDelete ? (
+            <div
+              className="flex flex-wrap items-center gap-1 border-2 border-ink bg-paper px-2 py-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="tag text-ink">Remove?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete();
+                  setConfirmDelete(false);
+                }}
+                className="focus-ink tag border border-ink bg-ink px-2 py-0.5 uppercase text-paper outline-none"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="focus-ink tag border border-ink px-2 py-0.5 uppercase text-ink outline-none hover:bg-blue-wash"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              aria-label={`Remove ${app.company} application`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirmDelete(true);
+              }}
+              className="focus-ink border-2 border-ink bg-paper px-2 py-1 font-display text-xs font-black uppercase text-ink outline-none hover:bg-yellow-wash"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={expanded}
-          className="focus-ink grid w-full gap-3 text-left outline-none sm:grid-cols-[1fr_auto] sm:items-start"
+          className="focus-ink grid w-full gap-3 pr-24 text-left outline-none sm:grid-cols-[1fr_auto] sm:items-start sm:pr-28"
         >
           <div>
             <h3 className="font-display text-[1.4rem] font-black sm:text-[1.7rem]">
@@ -344,6 +387,154 @@ export function AppliedApplicationCard({
         onSave={saveOnlineAssessment}
       />
     </motion.article>
+  );
+}
+
+export function AppliedApplicationListEditor({
+  apps,
+  onUpdate,
+  onStatusChange,
+  onDelete,
+}: {
+  apps: ApplicationRecord[];
+  onUpdate: (
+    applicationId: string,
+    patch: Partial<Pick<ApplicationRecord, "company" | "title" | "dateApplied">>,
+  ) => void;
+  onStatusChange: (applicationId: string, status: ApplicationLifecycleStatus) => void;
+  onDelete: (applicationId: string) => void;
+}) {
+  return (
+    <Sheet tone="paper-2" shadow="hard-sm" className="overflow-hidden">
+      <div className="border-b-2 border-ink/15 px-4 py-3 sm:px-5">
+        <p className="font-display text-sm font-black uppercase">Edit application list</p>
+        <p className="tag mt-1 text-ink-faint">
+          Update company, role, status, or date applied. Changes save when you leave a field.
+        </p>
+      </div>
+      <ul className="divide-y-2 divide-ink/10">
+        {apps.map((app) => (
+          <AppliedApplicationEditRow
+            key={app.applicationId}
+            app={app}
+            onUpdate={(patch) => onUpdate(app.applicationId, patch)}
+            onStatusChange={(status) => onStatusChange(app.applicationId, status)}
+            onDelete={() => onDelete(app.applicationId)}
+          />
+        ))}
+      </ul>
+    </Sheet>
+  );
+}
+
+function AppliedApplicationEditRow({
+  app,
+  onUpdate,
+  onStatusChange,
+  onDelete,
+}: {
+  app: ApplicationRecord;
+  onUpdate: (patch: Partial<Pick<ApplicationRecord, "company" | "title" | "dateApplied">>) => void;
+  onStatusChange: (status: ApplicationLifecycleStatus) => void;
+  onDelete: () => void;
+}) {
+  const [company, setCompany] = useState(app.company);
+  const [title, setTitle] = useState(app.title);
+  const [dateApplied, setDateApplied] = useState(app.dateApplied ?? "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    setCompany(app.company);
+    setTitle(app.title);
+    setDateApplied(app.dateApplied ?? "");
+  }, [app.applicationId, app.company, app.title, app.dateApplied]);
+
+  const fieldClass =
+    "focus-ink w-full min-w-0 border-2 border-ink/20 bg-paper px-2 py-1.5 text-[0.9rem] outline-none focus:border-ink";
+
+  return (
+    <li className="grid gap-3 px-4 py-3 sm:grid-cols-[1.2fr_1.4fr_0.9fr_0.8fr_auto] sm:items-center sm:px-5">
+      <label className="min-w-0">
+        <span className="tag mb-1 block text-ink-faint sm:hidden">Company</span>
+        <input
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+          onBlur={() => {
+            if (company.trim() && company !== app.company) onUpdate({ company: company.trim() });
+          }}
+          className={fieldClass}
+        />
+      </label>
+      <label className="min-w-0">
+        <span className="tag mb-1 block text-ink-faint sm:hidden">Role</span>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={() => {
+            if (title.trim() && title !== app.title) onUpdate({ title: title.trim() });
+          }}
+          className={fieldClass}
+        />
+      </label>
+      <label className="min-w-0">
+        <span className="tag mb-1 block text-ink-faint sm:hidden">Status</span>
+        <select
+          value={app.currentStatus}
+          onChange={(e) => onStatusChange(e.target.value as ApplicationLifecycleStatus)}
+          className={fieldClass}
+        >
+          {APPLICATION_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="min-w-0">
+        <span className="tag mb-1 block text-ink-faint sm:hidden">Applied</span>
+        <input
+          type="date"
+          value={dateApplied}
+          onChange={(e) => setDateApplied(e.target.value)}
+          onBlur={() => {
+            const next = dateApplied || null;
+            if (next !== app.dateApplied) onUpdate({ dateApplied: next });
+          }}
+          className={fieldClass}
+        />
+      </label>
+      <div className="flex shrink-0 items-center justify-end gap-1">
+        {confirmDelete ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                onDelete();
+                setConfirmDelete(false);
+              }}
+              className="focus-ink tag border-2 border-ink bg-ink px-2 py-1 uppercase text-paper outline-none"
+            >
+              Confirm
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              className="focus-ink tag border-2 border-ink px-2 py-1 uppercase text-ink outline-none hover:bg-blue-wash"
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="focus-ink tag border-2 border-ink px-2 py-1 uppercase text-ink outline-none hover:bg-yellow-wash"
+          >
+            Delete
+          </button>
+        )}
+      </div>
+    </li>
   );
 }
 

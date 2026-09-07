@@ -15,6 +15,7 @@ type AppsSlice = Pick<
   | "removeFromApplyList"
   | "setStatus"
   | "updateApplication"
+  | "deleteApplication"
   | "importAppliedApplications"
 >;
 

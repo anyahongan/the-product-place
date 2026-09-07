@@ -3,8 +3,10 @@ import { Sheet, Tab, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import {
   AppliedApplicationCard,
+  AppliedApplicationListEditor,
   AppliedStatusFilters,
 } from "@/components/apply/AppliedApplication";
+import { PinkHoverButton } from "@/components/network/PinkHoverButton";
 import { AppliedImportPanel } from "@/components/apply/AppliedImportPanel";
 import { OpenOnlineAssessmentsPanel } from "@/components/apply/OpenOnlineAssessmentsPanel";
 import { useApplyContext } from "@/components/apply/useApplyContext";
@@ -15,12 +17,13 @@ export function AppliedOverview({
 }: {
   focusApplicationId?: string;
 }) {
-  const { apps, stats, setStatus, updateApplication, hydrated, jobs, importAppliedApplications } =
+  const { apps, stats, setStatus, updateApplication, deleteApplication, hydrated, jobs, importAppliedApplications } =
     useApplyContext();
   const [filter, setFilter] = useState<"all" | ApplicationLifecycleStatus>("all");
   const [openId, setOpenId] = useState<string | null>(focusApplicationId ?? null);
   const [oaModalAppId, setOaModalAppId] = useState<string | null>(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [editListMode, setEditListMode] = useState(false);
 
   const jobById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
 
@@ -84,6 +87,26 @@ export function AppliedOverview({
 
       <AppliedStatusFilters value={filter} onChange={setFilter} counts={counts} />
 
+      {hydrated && apps.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="tag text-ink-faint">
+            {editListMode
+              ? "Editing list — use Remove on cards or Delete in the table"
+              : "Each card has a Remove button · open Edit list for bulk edits"}
+          </p>
+          <PinkHoverButton
+            variant="paper"
+            hoverAccent="blue"
+            onClick={() => {
+              setEditListMode((v) => !v);
+              if (editListMode) setOpenId(null);
+            }}
+          >
+            {editListMode ? "Done editing" : "Edit list"}
+          </PinkHoverButton>
+        </div>
+      )}
+
       <OpenOnlineAssessmentsPanel
         apps={apps}
         onOpenGuidance={(app) => {
@@ -124,6 +147,16 @@ export function AppliedOverview({
                 : "Try another status filter."}
             </p>
           </Sheet>
+        ) : editListMode ? (
+          <AppliedApplicationListEditor
+            apps={visible}
+            onUpdate={(applicationId, patch) => updateApplication(applicationId, patch)}
+            onStatusChange={(applicationId, status) => setStatus(applicationId, status)}
+            onDelete={(applicationId) => {
+              deleteApplication(applicationId);
+              if (openId === applicationId) setOpenId(null);
+            }}
+          />
         ) : (
           visible.map((app) => {
             const job = jobById.get(app.jobId);
@@ -139,6 +172,10 @@ export function AppliedOverview({
                 onToggle={() => setOpenId(openId === app.applicationId ? null : app.applicationId)}
                 onStatusChange={(status) => setStatus(app.applicationId, status)}
                 onUpdateApplication={(patch) => updateApplication(app.applicationId, patch)}
+                onDelete={() => {
+                  deleteApplication(app.applicationId);
+                  if (openId === app.applicationId) setOpenId(null);
+                }}
               />
             );
           })

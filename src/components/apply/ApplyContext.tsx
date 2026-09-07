@@ -22,6 +22,7 @@ export function ApplyProvider({ children }: { children: ReactNode }) {
         removeFromApplyList: recruiting.removeFromApplyList,
         setStatus: recruiting.setStatus,
         updateApplication: recruiting.updateApplication,
+        deleteApplication: recruiting.deleteApplication,
         importAppliedApplications: recruiting.importAppliedApplications,
       }}
     >
