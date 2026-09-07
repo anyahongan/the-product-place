@@ -5,6 +5,10 @@ import {
   postProcessImportRows,
   rowFromCells,
 } from "@/lib/apply/parseAppliedImportFields";
+import {
+  parseAppliedImportOcrText,
+  splitOcrLineToCells,
+} from "@/lib/apply/parseAppliedImportOcr";
 
 export type ParseAppliedImportResult = {
   rows: AppliedImportRow[];
@@ -87,7 +91,7 @@ export function parseLooseTableText(text: string): string[][] {
     return lines.map((line) => line.split(/\s{2,}/).map((cell) => cell.trim()));
   }
 
-  return parseCsv(text);
+  return lines.map((line) => splitOcrLineToCells(line));
 }
 
 export function parseAppliedImportGrid(grid: string[][]): ParseAppliedImportResult {
@@ -101,11 +105,23 @@ export function parseAppliedImportGrid(grid: string[][]): ParseAppliedImportResu
   const map = mapImportColumns(headers);
 
   if (map.company < 0 || map.title < 0) {
+    const ocrFallback = parseAppliedImportOcrText(
+      grid.map((row) => row.join("\t")).join("\n"),
+      grid,
+    );
+    if (ocrFallback.rows.length > 0) {
+      return {
+        ...ocrFallback,
+        skipped: ocrFallback.skipped + (grid.length - headerIdx - 1),
+        warnings: ocrFallback.warnings,
+      };
+    }
+
     return {
       rows: [],
       skipped: grid.length,
       warnings: [
-        "Could not find Company and Title columns. Use headers like Company, Role/Title, Status, Date Applied.",
+        "Could not find Company and Title columns. For screenshots, try a clearer crop of the table or export as CSV. Headers like Company, Role/Title, Status help.",
       ],
     };
   }
@@ -140,5 +156,17 @@ export function parseAppliedImportText(text: string): ParseAppliedImportResult {
 }
 
 export function parseAppliedImportLooseText(text: string): ParseAppliedImportResult {
-  return parseAppliedImportGrid(parseLooseTableText(text));
+  const grid = parseLooseTableText(text);
+  const primary = parseAppliedImportGrid(grid);
+  if (primary.rows.length > 0) return primary;
+
+  const ocrFallback = parseAppliedImportOcrText(text, grid);
+  if (ocrFallback.rows.length > 0) {
+    return {
+      ...ocrFallback,
+      warnings: [...ocrFallback.warnings, ...primary.warnings],
+    };
+  }
+
+  return primary;
 }

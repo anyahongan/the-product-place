@@ -34,6 +34,12 @@ async function preprocessImportImage(file: File): Promise<File | Blob> {
   return blob ?? file;
 }
 
+function pickBestOcrResult(results: ParseAppliedImportResult[]): ParseAppliedImportResult {
+  return results.reduce((best, current) =>
+    current.rows.length > best.rows.length ? current : best,
+  );
+}
+
 /** OCR fallback when server vision parsing is unavailable. */
 export async function parseAppliedImportImageOcr(
   file: File,
@@ -43,13 +49,23 @@ export async function parseAppliedImportImageOcr(
   const input = await preprocessImportImage(file);
 
   try {
-    await worker.setParameters({
-      tessedit_pageseg_mode: PSM.AUTO,
-      preserve_interword_spaces: "1",
-    });
+    const modes = [PSM.AUTO, PSM.SINGLE_BLOCK, PSM.SPARSE_TEXT, PSM.SINGLE_COLUMN] as const;
+    const attempts: ParseAppliedImportResult[] = [];
 
-    const { data } = await worker.recognize(input);
-    const parsed = parseAppliedImportLooseText(data.text);
+    for (const mode of modes) {
+      await worker.setParameters({
+        tessedit_pageseg_mode: mode,
+        preserve_interword_spaces: "1",
+      });
+      const { data } = await worker.recognize(input);
+      if (!data.text.trim()) continue;
+      attempts.push(parseAppliedImportLooseText(data.text));
+    }
+
+    const parsed = pickBestOcrResult(
+      attempts.length > 0 ? attempts : [{ rows: [], skipped: 0, warnings: [] }],
+    );
+
     return {
       ...parsed,
       warnings: [

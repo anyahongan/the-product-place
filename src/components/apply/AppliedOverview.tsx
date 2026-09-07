@@ -91,8 +91,8 @@ export function AppliedOverview({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="tag text-ink-faint">
             {editListMode
-              ? "Editing list — use Remove on cards or Delete in the table"
-              : "Each card has a Remove button · open Edit list for bulk edits"}
+              ? "Editing list — update fields inline or delete rows from the table"
+              : "Open a card to edit details · use Edit list for bulk changes"}
           </p>
           <PinkHoverButton
             variant="paper"

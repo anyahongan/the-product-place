@@ -122,6 +122,10 @@ export function AppliedApplicationCard({
     onOaModalOpened?.();
   }, [openOaOnMount, onOaModalOpened]);
 
+  useEffect(() => {
+    if (!expanded) setConfirmDelete(false);
+  }, [expanded]);
+
   const insights = notesForApplicationMaterials(notes, app.applicationId).map((note) => ({
     note,
     contact: contacts.find((c) => c.id === note.contactId),
@@ -156,51 +160,11 @@ export function AppliedApplicationCard({
       >
         <Tape className="-left-3 top-6" color={tone} angle={-88} width={52} height={22} />
 
-        <div className="absolute right-4 top-4 z-10 flex items-center gap-1">
-          {confirmDelete ? (
-            <div
-              className="flex flex-wrap items-center gap-1 border-2 border-ink bg-paper px-2 py-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="tag text-ink">Remove?</span>
-              <button
-                type="button"
-                onClick={() => {
-                  onDelete();
-                  setConfirmDelete(false);
-                }}
-                className="focus-ink tag border border-ink bg-ink px-2 py-0.5 uppercase text-paper outline-none"
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                className="focus-ink tag border border-ink px-2 py-0.5 uppercase text-ink outline-none hover:bg-blue-wash"
-              >
-                No
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              aria-label={`Remove ${app.company} application`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirmDelete(true);
-              }}
-              className="focus-ink border-2 border-ink bg-paper px-2 py-1 font-display text-xs font-black uppercase text-ink outline-none hover:bg-yellow-wash"
-            >
-              Remove
-            </button>
-          )}
-        </div>
-
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={expanded}
-          className="focus-ink grid w-full gap-3 pr-24 text-left outline-none sm:grid-cols-[1fr_auto] sm:items-start sm:pr-28"
+          className="focus-ink grid w-full gap-3 text-left outline-none sm:grid-cols-[1fr_auto] sm:items-start"
         >
           <div>
             <h3 className="font-display text-[1.4rem] font-black sm:text-[1.7rem]">
@@ -374,6 +338,47 @@ export function AppliedApplicationCard({
 
                 <NetworkInsightsPanel insights={insights} />
                 <NetworkingSuggestions application={app} />
+
+                <div className="mt-8 border-t-2 border-ink/15 pt-5">
+                  <h4 className="font-display text-[1.05rem] font-black uppercase">
+                    Remove application
+                  </h4>
+                  <p className="tag mt-1 text-ink-faint">
+                    Permanently delete {app.company} · {app.title} from your tracker.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {confirmDelete ? (
+                      <>
+                        <span className="tag text-ink">Remove this application?</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onDelete();
+                            setConfirmDelete(false);
+                          }}
+                          className="focus-ink tag border-2 border-ink bg-ink px-2.5 py-1.5 uppercase text-paper outline-none"
+                        >
+                          Yes, remove
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete(false)}
+                          className="focus-ink tag border-2 border-ink bg-paper px-2.5 py-1.5 uppercase text-ink outline-none hover:bg-blue-wash"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(true)}
+                        className="focus-ink tag border-2 border-ink bg-paper px-2.5 py-1.5 uppercase text-ink outline-none hover:bg-yellow-wash"
+                      >
+                        Remove from tracker
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
