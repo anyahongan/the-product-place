@@ -2,6 +2,7 @@ import type { AppliedImportRow } from "@/lib/apply/parseAppliedImportFields";
 import {
   findHeaderRowIndex,
   mapImportColumns,
+  postProcessImportRows,
   rowFromCells,
 } from "@/lib/apply/parseAppliedImportFields";
 
@@ -65,19 +66,28 @@ export function parseLooseTableText(text: string): string[][] {
     .filter(Boolean);
   if (lines.length === 0) return [];
 
-  const delimiter =
-    lines.filter((line) => line.includes("\t")).length >= lines.length / 2
-      ? "\t"
-      : lines.filter((line) => /\s{2,}/.test(line)).length >= lines.length / 2
-        ? null
-        : ",";
+  const pipeLines = lines.filter((line) => line.includes("|")).length;
+  const tabLines = lines.filter((line) => line.includes("\t")).length;
+  const spacedLines = lines.filter((line) => /\s{2,}/.test(line)).length;
 
-  if (delimiter === ",") return parseCsv(text);
+  if (pipeLines >= Math.max(2, lines.length / 3)) {
+    return lines.map((line) =>
+      line
+        .split("|")
+        .map((cell) => cell.trim())
+        .filter((cell, idx, arr) => !(idx === 0 && !cell) && !(idx === arr.length - 1 && !cell)),
+    );
+  }
 
-  return lines.map((line) => {
-    if (delimiter === "\t") return line.split("\t").map((cell) => cell.trim());
-    return line.split(/\s{2,}/).map((cell) => cell.trim());
-  });
+  if (tabLines >= lines.length / 2) {
+    return lines.map((line) => line.split("\t").map((cell) => cell.trim()));
+  }
+
+  if (spacedLines >= lines.length / 2) {
+    return lines.map((line) => line.split(/\s{2,}/).map((cell) => cell.trim()));
+  }
+
+  return parseCsv(text);
 }
 
 export function parseAppliedImportGrid(grid: string[][]): ParseAppliedImportResult {
@@ -122,7 +132,7 @@ export function parseAppliedImportGrid(grid: string[][]): ParseAppliedImportResu
     warnings.push("No application rows parsed after the header row.");
   }
 
-  return { rows, skipped, warnings };
+  return { rows: postProcessImportRows(rows), skipped, warnings };
 }
 
 export function parseAppliedImportText(text: string): ParseAppliedImportResult {

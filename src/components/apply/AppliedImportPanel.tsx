@@ -178,6 +178,7 @@ export function AppliedImportPanel({
                     <span className="tag shrink-0 uppercase text-ink-faint">{row.action}</span>
                     <span>
                       {row.row.company} · {row.row.title}
+                      <span className="text-ink-faint"> · {row.row.status}</span>
                       <span className="text-ink-faint"> — {row.reason}</span>
                     </span>
                   </li>
@@ -192,7 +193,17 @@ export function AppliedImportPanel({
                 variant="paper"
                 hoverAccent="blue"
                 disabled={busy || parsing || plan.records.length === 0}
-                onClick={() => void onImport(plan).then(() => reset())}
+                onClick={() => {
+                  void onImport(plan)
+                    .then(() => reset())
+                    .catch((e: unknown) => {
+                      setError(
+                        e instanceof Error
+                          ? e.message
+                          : "Import failed. Your list was parsed but could not sync.",
+                      );
+                    });
+                }}
               >
                 Import {plan.createCount + plan.updateCount} applications
               </PinkHoverButton>

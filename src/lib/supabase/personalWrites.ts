@@ -10,6 +10,7 @@ import {
   mergeImportedIntoApp,
 } from "@/lib/apply/repositories/applicationRepository";
 import type { AppliedImportPlan } from "@/lib/apply/planAppliedImport";
+import { buildRoleDedupeKey } from "@/lib/apply/normalization/dedupe";
 
 function client(): SupabaseClient {
   const sb = getSupabaseBrowserClient();
@@ -233,6 +234,49 @@ export async function persistApplicationFields(
   if (error) throw error;
 }
 
+async function findExistingRemoteApplicationId(
+  userId: string,
+  draft: ApplicationRecord,
+  matchedJob: JobListingView | null,
+  existing: ApplicationRecord | undefined,
+): Promise<string | null> {
+  if (existing && isUuid(existing.applicationId)) return existing.applicationId;
+
+  const sb = client();
+
+  if (matchedJob && isUuid(matchedJob.id)) {
+    const { data } = await sb
+      .from("applications")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("job_id", matchedJob.id)
+      .maybeSingle();
+    if (data?.id) return data.id as string;
+  }
+
+  const { data: byLegacy } = await sb
+    .from("applications")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("legacy_job_id", draft.jobId)
+    .maybeSingle();
+  if (byLegacy?.id) return byLegacy.id as string;
+
+  const { data: candidates } = await sb
+    .from("applications")
+    .select("id, company_name, title")
+    .eq("user_id", userId);
+
+  const key = buildRoleDedupeKey(draft.company, draft.title);
+  for (const row of candidates ?? []) {
+    if (buildRoleDedupeKey(row.company_name as string, row.title as string) === key) {
+      return row.id as string;
+    }
+  }
+
+  return null;
+}
+
 export async function importAppliedApplicationsBatch(
   userId: string,
   records: AppliedImportPlan["records"],
@@ -246,7 +290,9 @@ export async function importAppliedApplicationsBatch(
       ? mergeImportedIntoApp(existing, row, matchedJob)
       : createImportedApplicationRecord(row, matchedJob);
 
-    if (existing && isUuid(existing.applicationId)) {
+    const remoteId = await findExistingRemoteApplicationId(userId, draft, matchedJob, existing);
+
+    if (remoteId) {
       const { error } = await sb
         .from("applications")
         .update({
@@ -256,24 +302,35 @@ export async function importAppliedApplicationsBatch(
           title: draft.title,
           apply_url: draft.applyUrl,
           source_url: draft.sourceUrl,
+          legacy_job_id: draft.jobId,
+          ...(matchedJob && isUuid(matchedJob.id) ? { job_id: matchedJob.id } : {}),
           updated_at: now,
           job_snapshot: jobSnapshotFromRecord(draft, matchedJob),
         })
-        .eq("id", existing.applicationId)
+        .eq("id", remoteId)
         .eq("user_id", userId);
       if (error) throw error;
 
-      if (existing.currentStatus !== draft.currentStatus) {
+      let priorStatus = existing?.currentStatus;
+      if (!priorStatus) {
+        const { data: remoteRow } = await sb
+          .from("applications")
+          .select("current_status")
+          .eq("id", remoteId)
+          .maybeSingle();
+        priorStatus = remoteRow?.current_status as ApplicationLifecycleStatus | undefined;
+      }
+      if (priorStatus !== draft.currentStatus) {
         const { error: evErr } = await sb.from("application_status_events").insert({
           user_id: userId,
-          application_id: existing.applicationId,
+          application_id: remoteId,
           status: draft.currentStatus,
           occurred_at: now,
         });
         if (evErr) throw evErr;
       }
 
-      synced.push({ ...draft, applicationId: existing.applicationId });
+      synced.push({ ...draft, applicationId: remoteId });
     } else {
       const catalogCompanyId =
         matchedJob && isUuid(matchedJob.catalogCompanyId) ? matchedJob.catalogCompanyId! : null;
@@ -312,7 +369,11 @@ export async function importAppliedApplicationsBatch(
     }
 
     if (matchedJob && isUuid(matchedJob.id)) {
-      await saveJob(userId, matchedJob.id, false);
+      try {
+        await saveJob(userId, matchedJob.id, false);
+      } catch {
+        // Non-fatal: import still succeeded even if saved_jobs upsert fails.
+      }
     }
   }
 

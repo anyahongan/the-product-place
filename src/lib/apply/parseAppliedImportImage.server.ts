@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
   normalizeRawImportRow,
+  postProcessImportRows,
   type AppliedImportRow,
 } from "@/lib/apply/parseAppliedImportFields";
 
@@ -28,11 +29,16 @@ Return JSON: {
     "materialsRequired": { "resume": boolean, "coverLetter": boolean, "transcript": boolean, "gpa": boolean }|null
   }]
 }
+
+Status mapping (use the closest exact label):
+- Saved, Preparing, Applied, Waiting, Online Assessment, Recruiter Screen, Interviewing, Final Round, Offer, Rejected, Withdrawn
+- Examples: "Phone screen" -> Recruiter Screen; "OA" / "HackerRank" -> Online Assessment; "Onsite" / "Technical" -> Interviewing; "No response" -> Waiting; "Declined" -> Rejected
+
 Rules:
-- Extract every visible application row. Skip blank rows.
+- Extract every visible application row. Skip blank rows and header rows.
 - Do NOT invent companies, titles, or dates not visible in the image.
-- Map status to the closest of: Saved, Preparing, Applied, Waiting, Online Assessment, Recruiter Screen, Interviewing, Final Round, Offer, Rejected, Withdrawn.
-- Put any extra per-row notes (referral, location, next step, comments) in experienceNotes.
+- Read the status/stage column carefully — it is the most important field.
+- Put referral, location, next step, recruiter name, or comments in experienceNotes.
 - Use ISO dates when possible.
 - Include materialsRequired only when the tracker shows resume/cover letter/transcript/GPA requirements.`;
 
@@ -100,12 +106,17 @@ export const parseAppliedImportImageFn = createServerFn({ method: "POST" })
     if (!content) return { rows: [] as AppliedImportRow[], warnings: ["No rows extracted."] };
 
     const parsed = JSON.parse(content) as ExtractedRows;
-    const rows = (parsed.rows ?? [])
-      .map((row) => normalizeRawImportRow(row))
-      .filter((row): row is AppliedImportRow => row != null);
+    const rows = postProcessImportRows(
+      (parsed.rows ?? [])
+        .map((row) => normalizeRawImportRow(row))
+        .filter((row): row is AppliedImportRow => row != null),
+    );
 
     return {
       rows,
-      warnings: rows.length === 0 ? ["No application rows found in that image."] : [],
+      warnings:
+        rows.length === 0
+          ? ["No application rows found in that image."]
+          : ["Review parsed status for each row before importing."],
     };
   });

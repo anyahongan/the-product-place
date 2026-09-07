@@ -2,7 +2,8 @@ import type {
   ApplicationLifecycleStatus,
   ApplicationMaterialsRequired,
 } from "@/lib/apply/types";
-import { DEFAULT_MATERIALS_REQUIRED } from "@/lib/apply/types";
+import { APPLICATION_STATUSES, DEFAULT_MATERIALS_REQUIRED } from "@/lib/apply/types";
+import { buildRoleDedupeKey } from "@/lib/apply/normalization/dedupe";
 
 export type AppliedImportRow = {
   company: string;
@@ -26,42 +27,74 @@ export type ParsedImportGrid = {
 export const STATUS_ALIASES: Record<string, ApplicationLifecycleStatus> = {
   saved: "Saved",
   bookmarked: "Saved",
+  bookmark: "Saved",
   preparing: "Preparing",
   "in progress": "Preparing",
+  "in-progress": "Preparing",
+  draft: "Preparing",
   applied: "Applied",
   submitted: "Applied",
+  submit: "Applied",
   complete: "Applied",
   completed: "Applied",
+  done: "Applied",
   waiting: "Waiting",
   pending: "Waiting",
   ghosted: "Waiting",
   "no response": "Waiting",
+  "no reply": "Waiting",
+  "in review": "Waiting",
+  "under review": "Waiting",
   "online assessment": "Online Assessment",
   oa: "Online Assessment",
   assessment: "Online Assessment",
   hackerrank: "Online Assessment",
   codility: "Online Assessment",
+  codesignal: "Online Assessment",
+  karat: "Online Assessment",
+  "coding assessment": "Online Assessment",
+  "technical assessment": "Online Assessment",
   "recruiter screen": "Recruiter Screen",
   "phone screen": "Recruiter Screen",
+  "phone interview": "Recruiter Screen",
   screen: "Recruiter Screen",
   recruiter: "Recruiter Screen",
+  "hiring manager screen": "Recruiter Screen",
   interviewing: "Interviewing",
   interview: "Interviewing",
+  interviews: "Interviewing",
   onsite: "Interviewing",
   "on-site": "Interviewing",
+  "on site": "Interviewing",
+  technical: "Interviewing",
+  "technical interview": "Interviewing",
+  "take home": "Interviewing",
+  "take-home": "Interviewing",
+  "case study": "Interviewing",
+  "second round": "Interviewing",
+  "third round": "Interviewing",
+  "interview complete": "Interviewing",
+  loop: "Interviewing",
   "final round": "Final Round",
+  "final interview": "Final Round",
   final: "Final Round",
   offer: "Offer",
+  "offer received": "Offer",
+  accepted: "Offer",
   rejected: "Rejected",
   declined: "Rejected",
-  no: "Rejected",
+  "not selected": "Rejected",
+  "no offer": "Rejected",
+  denied: "Rejected",
   withdrawn: "Withdrawn",
+  withdraw: "Withdrawn",
+  closed: "Withdrawn",
 };
 
 const COLUMN_ALIASES: Record<string, string[]> = {
   company: ["company", "employer", "organization", "org", "firm", "company name"],
   title: ["title", "role", "position", "job title", "job", "role title"],
-  status: ["status", "stage", "application status", "pipeline", "phase"],
+  status: ["status", "stage", "application status", "pipeline", "phase", "step", "round"],
   dateApplied: [
     "date applied",
     "applied",
@@ -114,25 +147,116 @@ export function normalizeHeader(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export function mapImportStatus(raw: string | undefined): ApplicationLifecycleStatus {
-  if (!raw?.trim()) return "Applied";
-  const key = raw.trim().toLowerCase();
-  if (STATUS_ALIASES[key]) return STATUS_ALIASES[key];
-  for (const [alias, status] of Object.entries(STATUS_ALIASES)) {
-    if (key.includes(alias)) return status;
+export function cleanImportCell(value: string | undefined): string {
+  if (!value) return "";
+  return value
+    .replace(/\u00a0/g, " ")
+    .replace(/[|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function aliasMatches(normalized: string, alias: string): boolean {
+  if (normalized === alias) return true;
+  if (alias.length < 3) return normalized === alias;
+  const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|\\b)${escaped}(\\b|$)`).test(normalized);
+}
+
+export function mapImportStatus(raw: string | undefined): ApplicationLifecycleStatus | null {
+  if (!raw?.trim()) return null;
+  const normalized = normalizeHeader(raw);
+
+  for (const status of APPLICATION_STATUSES) {
+    if (normalizeHeader(status) === normalized) return status;
   }
+
+  if (STATUS_ALIASES[normalized]) return STATUS_ALIASES[normalized];
+
+  const ranked = Object.entries(STATUS_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, status] of ranked) {
+    if (aliasMatches(normalized, alias)) return status;
+  }
+
+  return null;
+}
+
+export function inferImportStatus(input: {
+  statusRaw?: string;
+  notes?: string | null;
+  onlineAssessmentDue?: string | null;
+  extraHints?: string[];
+}): ApplicationLifecycleStatus {
+  const hints = [
+    input.statusRaw,
+    input.notes,
+    ...(input.extraHints ?? []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const mapped = mapImportStatus(input.statusRaw);
+  if (mapped) {
+    if (mapped === "Applied" && input.onlineAssessmentDue) return "Online Assessment";
+    return mapped;
+  }
+
+  if (/offer received|received offer|\boffer\b|accepted offer/.test(hints)) return "Offer";
+  if (/reject|declin|not selected|no offer|did not pass|unsuccessful/.test(hints)) {
+    return "Rejected";
+  }
+  if (/withdraw|withdrew|closed out|archived role/.test(hints)) return "Withdrawn";
+  if (/final round|final interview|onsite final|superday/.test(hints)) return "Final Round";
+  if (/recruiter screen|phone screen|hm screen|hiring manager screen|intro call/.test(hints)) {
+    return "Recruiter Screen";
+  }
+  if (
+    /interview|onsite|on-site|technical round|panel|loop|take-?home|case study|second round|third round/.test(
+      hints,
+    )
+  ) {
+    return "Interviewing";
+  }
+  if (
+    /online assessment|oa due|hackerrank|codility|codesignal|karat|assessment due|coding test/.test(
+      hints,
+    ) ||
+    input.onlineAssessmentDue
+  ) {
+    return "Online Assessment";
+  }
+  if (/waiting|pending|ghost|no response|follow up|follow-up|in review|under review/.test(hints)) {
+    return "Waiting";
+  }
+  if (/prepar|draft|working on/.test(hints)) return "Preparing";
+  if (/saved|bookmark/.test(hints)) return "Saved";
+  if (/applied|submitted/.test(hints)) return "Applied";
+
   return "Applied";
 }
 
 export function parseFlexibleDate(raw: string | undefined): string | null {
   if (!raw?.trim()) return null;
-  const t = raw.trim();
+  const t = cleanImportCell(raw);
   if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+
+  const monthDayYear = t.match(
+    /^([A-Za-z]{3,9})\s+(\d{1,2})(?:,?\s+(\d{2,4}))?$/,
+  );
+  if (monthDayYear) {
+    const parsed = Date.parse(
+      `${monthDayYear[1]} ${monthDayYear[2]}, ${monthDayYear[3] ?? new Date().getFullYear()}`,
+    );
+    if (!Number.isNaN(parsed)) return new Date(parsed).toISOString().slice(0, 10);
+  }
+
   const us = t.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
   if (us) {
     const year = us[3]!.length === 2 ? `20${us[3]}` : us[3]!;
     return `${year}-${us[1]!.padStart(2, "0")}-${us[2]!.padStart(2, "0")}`;
   }
+
   const parsed = Date.parse(t);
   if (!Number.isNaN(parsed)) return new Date(parsed).toISOString().slice(0, 10);
   return null;
@@ -263,40 +387,62 @@ function readNotes(cells: string[], map: ImportColumnMap): string | null {
 }
 
 export function rowFromCells(cells: string[], map: ImportColumnMap): AppliedImportRow | null {
-  const company = (cells[map.company] ?? "").trim();
-  const title = (cells[map.title] ?? "").trim();
+  const cleaned = cells.map((cell) => cleanImportCell(cell));
+  const company = cleaned[map.company] ?? "";
+  const title = cleaned[map.title] ?? "";
   if (!company || !title) return null;
+  if (/^company|employer|organization$/i.test(company) && /^title|role|position$/i.test(title)) {
+    return null;
+  }
 
-  const statusRaw = map.status >= 0 ? cells[map.status] : undefined;
-  const status = mapImportStatus(statusRaw);
+  const statusRaw = map.status >= 0 ? cleaned[map.status] : undefined;
   const onlineAssessmentDue =
-    map.onlineAssessmentDue >= 0
-      ? parseFlexibleDate(cells[map.onlineAssessmentDue])
-      : null;
+    map.onlineAssessmentDue >= 0 ? parseFlexibleDate(cleaned[map.onlineAssessmentDue]) : null;
+  const experienceNotes = readNotes(cleaned, map);
+  const extraHints = map.unmapped.map(({ header, index }) => `${header} ${cleaned[index] ?? ""}`);
+
+  const status = inferImportStatus({
+    statusRaw,
+    notes: experienceNotes,
+    onlineAssessmentDue,
+    extraHints,
+  });
 
   return {
     company,
     title,
-    status:
-      onlineAssessmentDue && status === "Applied" && /oa|assessment/i.test(statusRaw ?? "")
-        ? "Online Assessment"
-        : status,
-    dateApplied: parseFlexibleDate(map.dateApplied >= 0 ? cells[map.dateApplied] : undefined),
-    postedDate: parseFlexibleDate(map.postedDate >= 0 ? cells[map.postedDate] : undefined),
-    deadline: parseFlexibleDate(map.deadline >= 0 ? cells[map.deadline] : undefined),
-    applyUrl: map.applyUrl >= 0 ? cells[map.applyUrl]?.trim() || null : null,
-    experienceNotes: readNotes(cells, map),
+    status,
+    dateApplied: parseFlexibleDate(map.dateApplied >= 0 ? cleaned[map.dateApplied] : undefined),
+    postedDate: parseFlexibleDate(map.postedDate >= 0 ? cleaned[map.postedDate] : undefined),
+    deadline: parseFlexibleDate(map.deadline >= 0 ? cleaned[map.deadline] : undefined),
+    applyUrl: map.applyUrl >= 0 ? cleaned[map.applyUrl]?.trim() || null : null,
+    experienceNotes,
     onlineAssessmentDue,
-    materialsRequired: readMaterials(cells, map),
+    materialsRequired: readMaterials(cleaned, map),
   };
 }
 
 export function findHeaderRowIndex(rows: string[][]): number {
-  for (let i = 0; i < Math.min(rows.length, 12); i++) {
-    const map = mapImportColumns(rows[i]!);
+  let bestIdx = 0;
+  let bestScore = -1;
+
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
+    const map = mapImportColumns(rows[i]!.map(cleanImportCell));
+    let score = 0;
+    if (map.company >= 0) score += 3;
+    if (map.title >= 0) score += 3;
+    if (map.status >= 0) score += 2;
+    if (map.dateApplied >= 0) score += 1;
+    if (map.deadline >= 0) score += 1;
+    if (map.experienceNotes >= 0) score += 1;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
     if (map.company >= 0 && map.title >= 0) return i;
   }
-  return 0;
+
+  return bestScore >= 4 ? bestIdx : 0;
 }
 
 export function normalizeRawImportRow(raw: Record<string, unknown>): AppliedImportRow | null {
@@ -348,7 +494,13 @@ export function normalizeRawImportRow(raw: Record<string, unknown>): AppliedImpo
     };
   }
 
-  const status = mapImportStatus(typeof raw["status"] === "string" ? raw["status"] : undefined);
+  const status = inferImportStatus({
+    statusRaw: typeof raw["status"] === "string" ? raw["status"] : undefined,
+    notes: notesParts.length ? notesParts.join("\n") : null,
+    onlineAssessmentDue: parseFlexibleDate(
+      typeof raw["onlineAssessmentDue"] === "string" ? raw["onlineAssessmentDue"] : undefined,
+    ),
+  });
   const onlineAssessmentDue = parseFlexibleDate(
     typeof raw["onlineAssessmentDue"] === "string" ? raw["onlineAssessmentDue"] : undefined,
   );
@@ -356,7 +508,7 @@ export function normalizeRawImportRow(raw: Record<string, unknown>): AppliedImpo
   return {
     company,
     title,
-    status: onlineAssessmentDue && status === "Applied" ? "Online Assessment" : status,
+    status,
     dateApplied: parseFlexibleDate(
       typeof raw["dateApplied"] === "string" ? raw["dateApplied"] : undefined,
     ),
@@ -447,4 +599,58 @@ export function importRowDiffersFromApp(
     }
   }
   return false;
+}
+
+function mergeImportRows(a: AppliedImportRow, b: AppliedImportRow): AppliedImportRow {
+  const pick = <T>(left: T | null | undefined, right: T | null | undefined): T | null =>
+    left ?? right ?? null;
+
+  const notes = [a.experienceNotes, b.experienceNotes]
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+
+  const status =
+    a.status !== "Applied" ? a.status : b.status !== "Applied" ? b.status : a.status;
+
+  return {
+    company: a.company || b.company,
+    title: a.title || b.title,
+    status,
+    dateApplied: pick(a.dateApplied, b.dateApplied),
+    postedDate: pick(a.postedDate, b.postedDate),
+    deadline: pick(a.deadline, b.deadline),
+    applyUrl: pick(a.applyUrl, b.applyUrl),
+    experienceNotes: notes || null,
+    onlineAssessmentDue: pick(a.onlineAssessmentDue, b.onlineAssessmentDue),
+    materialsRequired: a.materialsRequired ?? b.materialsRequired,
+  };
+}
+
+export function postProcessImportRows(rows: AppliedImportRow[]): AppliedImportRow[] {
+  const deduped = new Map<string, AppliedImportRow>();
+
+  for (const row of rows) {
+    const company = cleanImportCell(row.company);
+    const title = cleanImportCell(row.title);
+    if (!company || !title) continue;
+    if (company.length < 2 || title.length < 2) continue;
+
+    const normalized: AppliedImportRow = {
+      ...row,
+      company,
+      title,
+      status: inferImportStatus({
+        statusRaw: row.status,
+        notes: row.experienceNotes,
+        onlineAssessmentDue: row.onlineAssessmentDue,
+      }),
+    };
+
+    const key = buildRoleDedupeKey(normalized.company, normalized.title);
+    const existing = deduped.get(key);
+    deduped.set(key, existing ? mergeImportRows(existing, normalized) : normalized);
+  }
+
+  return [...deduped.values()];
 }
