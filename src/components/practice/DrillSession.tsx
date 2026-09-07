@@ -27,6 +27,7 @@ import {
   PRACTICE_FORMAT_LABELS,
 } from "@/lib/learning/types";
 import { stopSpeaking } from "@/lib/learning/useSpeechOutput";
+import { readPageDraft, writePageDraft } from "@/lib/navigation/pageSession";
 import { useEffect, useState } from "react";
 
 const TARGET_KEY = "tpp:practice-target:v1";
@@ -96,6 +97,20 @@ export type PracticeTarget = {
   role: string;
   interviewType: string;
 };
+
+type DrillDraft = {
+  phase: "prompt" | "write";
+  response: string;
+  selectedIds: string[];
+};
+
+function drillDraftKey(questionId: string): string {
+  return `practice:drill:${questionId}`;
+}
+
+function loadDrillDraft(questionId: string): DrillDraft | null {
+  return readPageDraft<DrillDraft>(drillDraftKey(questionId));
+}
 
 export function loadPracticeTarget(): PracticeTarget {
   if (typeof localStorage === "undefined") return { company: "", role: "", interviewType: "" };
@@ -297,8 +312,11 @@ export function DrillSession({
   /** When set (e.g. OA prep), pre-fills interview target fields. */
   initialTarget?: Partial<PracticeTarget>;
 }) {
-  const [phase, setPhase] = useState<"prompt" | "write" | "review">("prompt");
-  const [response, setResponse] = useState("");
+  const savedDraft = loadDrillDraft(question.id);
+  const [phase, setPhase] = useState<"prompt" | "write" | "review">(
+    savedDraft?.phase ?? "prompt",
+  );
+  const [response, setResponse] = useState(savedDraft?.response ?? "");
   const [rubric, setRubric] = useState<Record<string, boolean>>({});
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -309,7 +327,7 @@ export function DrillSession({
   const [grade, setGrade] = useState<PracticeGradeResult | null>(null);
   const [grading, setGrading] = useState(false);
   const [gradeError, setGradeError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(savedDraft?.selectedIds ?? []);
 
   const format = questionFormat(question);
   const isChoice = format === "multiple-choice" || format === "checkbox";
@@ -324,6 +342,15 @@ export function DrillSession({
   }, [initialTarget?.company, initialTarget?.role, initialTarget?.interviewType, question.id]);
 
   useEffect(() => () => stopSpeaking(), []);
+
+  useEffect(() => {
+    if (phase === "review") return;
+    writePageDraft(drillDraftKey(question.id), {
+      phase: phase === "prompt" ? "prompt" : "write",
+      response,
+      selectedIds,
+    } satisfies DrillDraft);
+  }, [question.id, phase, response, selectedIds]);
 
   function updateTarget(next: PracticeTarget) {
     setTarget(next);

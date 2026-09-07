@@ -1,9 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  resumeExperienceKey,
+  type ParsedResumeExperience,
+} from "@/lib/profile/parseResumeExperiences";
 import type {
   ExperienceBullet,
   ExperienceMetric,
   ExperienceRecord,
+  ExperienceSource,
   ExperienceType,
 } from "@/types/profile";
 
@@ -28,6 +33,8 @@ export type ExperienceInput = {
   caseStudyUrl?: string | null;
   productType?: string | null;
   projectStatus?: string | null;
+  source?: ExperienceSource;
+  resumeKey?: string | null;
 };
 
 function mapExperience(
@@ -51,13 +58,15 @@ function mapExperience(
     caseStudyUrl: (row["case_study_url"] as string) || null,
     productType: (row["product_type"] as string) || null,
     projectStatus: (row["project_status"] as string) || null,
+    source: (row["source"] as ExperienceSource) || "manual",
+    resumeKey: (row["resume_key"] as string) || null,
     sortOrder: (row["sort_order"] as number) || 0,
     bullets,
     metrics,
   };
 }
 
-function toRow(userId: string, input: ExperienceInput, sortOrder?: number) {
+function toRowFields(userId: string, input: ExperienceInput, sortOrder?: number) {
   return {
     user_id: userId,
     experience_type: input.experienceType,
@@ -77,6 +86,32 @@ function toRow(userId: string, input: ExperienceInput, sortOrder?: number) {
     ...(sortOrder !== undefined ? { sort_order: sortOrder } : {}),
     updated_at: new Date().toISOString(),
   };
+}
+
+function toCreateRow(userId: string, input: ExperienceInput, sortOrder?: number) {
+  const source = input.source ?? "manual";
+  return {
+    ...toRowFields(userId, input, sortOrder),
+    source,
+    resume_key:
+      source === "resume"
+        ? input.resumeKey?.trim() ||
+          resumeExperienceKey(input.organization, input.title)
+        : null,
+  };
+}
+
+function toUpdateRow(userId: string, input: ExperienceInput) {
+  const row = toRowFields(userId, input) as Record<string, unknown>;
+  if (input.source !== undefined) {
+    row["source"] = input.source;
+    row["resume_key"] =
+      input.source === "resume"
+        ? input.resumeKey?.trim() ||
+          resumeExperienceKey(input.organization, input.title)
+        : null;
+  }
+  return row;
 }
 
 export async function listExperiences(userId: string): Promise<ExperienceRecord[]> {
@@ -154,7 +189,7 @@ export async function createExperience(
   const nextOrder = ((last?.[0]?.sort_order as number) ?? -1) + 1;
   const { data, error } = await sb
     .from("experiences")
-    .insert(toRow(userId, input, nextOrder))
+    .insert(toCreateRow(userId, input, nextOrder))
     .select("*")
     .single();
   if (error || !data) throw error ?? new Error("Failed to create experience.");
@@ -168,7 +203,7 @@ export async function updateExperience(
 ): Promise<ExperienceRecord> {
   const { data, error } = await client()
     .from("experiences")
-    .update(toRow(userId, input))
+    .update(toUpdateRow(userId, input))
     .eq("id", id)
     .eq("user_id", userId)
     .select("*")
@@ -407,4 +442,76 @@ export async function deleteExperienceMetric(userId: string, id: string): Promis
     .eq("id", id)
     .eq("user_id", userId);
   if (error) throw error;
+}
+
+/** Replace resume-sourced rows with freshly parsed experiences; keep manual entries. */
+export async function syncResumeExperiences(
+  userId: string,
+  parsed: ParsedResumeExperience[],
+): Promise<ExperienceRecord[]> {
+  const sb = client();
+
+  const { error: deleteError } = await sb
+    .from("experiences")
+    .delete()
+    .eq("user_id", userId)
+    .eq("source", "resume");
+  if (deleteError) throw deleteError;
+
+  const { data: manualRows, error: manualError } = await sb
+    .from("experiences")
+    .select("id, sort_order")
+    .eq("user_id", userId)
+    .eq("source", "manual")
+    .order("sort_order", { ascending: true });
+  if (manualError) throw manualError;
+
+  for (let i = 0; i < parsed.length; i++) {
+    const item = parsed[i]!;
+    const input: ExperienceInput = {
+      experienceType: item.experienceType,
+      organization: item.organization,
+      title: item.title,
+      location: item.location,
+      startDate: item.startDate,
+      endDate: item.endDate,
+      isCurrent: item.isCurrent,
+      summary: item.summary,
+      skills: item.skills,
+      source: "resume",
+      resumeKey: resumeExperienceKey(item.organization, item.title),
+    };
+
+    const { data: exp, error: expError } = await sb
+      .from("experiences")
+      .insert(toCreateRow(userId, input, i))
+      .select("*")
+      .single();
+    if (expError || !exp) throw expError ?? new Error("Failed to save parsed experience.");
+
+    if (item.bullets.length > 0) {
+      const { error: bulletError } = await sb.from("experience_bullets").insert(
+        item.bullets.map((content, sortOrder) => ({
+          user_id: userId,
+          experience_id: exp.id as string,
+          content,
+          sort_order: sortOrder,
+        })),
+      );
+      if (bulletError) throw bulletError;
+    }
+  }
+
+  const manualOffset = parsed.length;
+  for (let i = 0; i < (manualRows ?? []).length; i++) {
+    const row = manualRows![i]!;
+    const { error } = await sb
+      .from("experiences")
+      .update({ sort_order: manualOffset + i, updated_at: new Date().toISOString() })
+      .eq("id", row.id as string)
+      .eq("user_id", userId);
+    if (error) throw error;
+  }
+
+  return listExperiences(userId);
 }

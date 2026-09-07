@@ -6,11 +6,11 @@ import {
   appendStatus,
   createAppliedRecord,
   findApplicationByJobId,
+  listApplyListIds,
   listApplications,
-  listAutoQueueIds,
   listSavedJobIds,
   saveApplications,
-  saveAutoQueueIds,
+  saveApplyListIds,
   saveSavedJobIds,
   upsertApplication,
 } from "@/lib/apply/repositories/applicationRepository";
@@ -24,7 +24,7 @@ export function useApplications() {
   useEffect(() => {
     setApps(listApplications());
     setSavedIds(new Set(listSavedJobIds()));
-    setQueueIds(new Set(listAutoQueueIds()));
+    setQueueIds(new Set(listApplyListIds()));
     setHydrated(true);
   }, []);
 
@@ -40,7 +40,7 @@ export function useApplications() {
 
   useEffect(() => {
     if (!hydrated) return;
-    saveAutoQueueIds([...queueIds]);
+    saveApplyListIds([...queueIds]);
   }, [queueIds, hydrated]);
 
   const toggleSaved = useCallback((jobId: string) => {
@@ -62,24 +62,12 @@ export function useApplications() {
     });
   }, []);
 
-  const addToAutoQueue = useCallback((job: JobListingView) => {
+  const addToApplyList = useCallback((job: JobListingView) => {
     setQueueIds((prev) => new Set(prev).add(job.id));
-    setApps((prev) => {
-      const existing = findApplicationByJobId(prev, job.id);
-      if (existing) {
-        return upsertApplication(prev, {
-          ...existing,
-          autoQueued: true,
-        });
-      }
-      return upsertApplication(prev, {
-        ...createAppliedRecord(job, "Saved"),
-        autoQueued: true,
-      });
-    });
+    setSavedIds((prev) => new Set(prev).add(job.id));
   }, []);
 
-  const removeFromAutoQueue = useCallback((jobId: string) => {
+  const removeFromApplyList = useCallback((jobId: string) => {
     setQueueIds((prev) => {
       const next = new Set(prev);
       next.delete(jobId);
@@ -134,8 +122,8 @@ export function useApplications() {
     stats,
     toggleSaved,
     markApplied,
-    addToAutoQueue,
-    removeFromAutoQueue,
+    addToApplyList,
+    removeFromApplyList,
     setStatus,
   };
 }

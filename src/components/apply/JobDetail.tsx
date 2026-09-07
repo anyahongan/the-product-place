@@ -5,7 +5,7 @@ import { ApplyMaterialsSection } from "@/components/apply/ApplyMaterialsSection"
 import { formatShortDate, EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from "@/data/apply";
 import { eligibilityLabel } from "@/lib/apply/normalization/roleEligibility";
 import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
-import { modeCta } from "@/components/apply/modeCta";
+import { modeCta, applyListCta } from "@/components/apply/modeCta";
 import { generateMaterialsForJob } from "@/lib/apply/generateMaterialsForJob";
 import type { ApplyMaterialTemplates } from "@/lib/apply/applyMaterialTemplates";
 import { plainJobDescription } from "@/lib/apply/plainJobText";
@@ -19,19 +19,23 @@ export function JobDetail({
   job,
   mode,
   applied,
+  onApplyList = false,
   profileBundle,
   userId,
   onClose,
   onApply,
+  onAddToApplyList,
   onMarkApplied,
 }: {
   job: JobListingView | null;
   mode: ApplicationMode;
   applied: boolean;
+  onApplyList?: boolean;
   profileBundle: UserProfileBundle | null;
   userId: string | null;
   onClose: () => void;
   onApply: () => void;
+  onAddToApplyList?: () => void;
   onMarkApplied: () => void;
 }) {
   const reduced = useReducedMotion();
@@ -63,7 +67,7 @@ export function JobDetail({
     <AnimatePresence>
       {job && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-stretch justify-end bg-ink/45"
+          className="fixed inset-0 z-50 flex items-stretch justify-end bg-ink/45 md:items-center md:justify-center md:p-5 lg:p-6"
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reduced ? { opacity: 1 } : { opacity: 0 }}
@@ -77,7 +81,12 @@ export function JobDetail({
             animate={{ x: 0 }}
             exit={reduced ? { x: 0 } : { x: "100%" }}
             transition={{ duration: 0.28, ease: [0.2, 0.9, 0.2, 1] }}
-            className="relative h-full w-full max-w-xl overflow-y-auto border-l-2 border-ink bg-paper shadow-hard"
+            className={cn(
+              "relative h-full w-full overflow-y-auto bg-paper shadow-hard",
+              "border-l-2 border-ink",
+              "md:h-[calc(100vh-2.5rem)] md:max-h-[calc(100vh-2.5rem)] md:w-[min(1400px,96vw)] md:max-w-[96vw] md:border-2",
+              "lg:h-[calc(100vh-3rem)] lg:max-h-[calc(100vh-3rem)] lg:w-[min(1600px,94vw)]",
+            )}
             onClick={(e) => e.stopPropagation()}
           >
             <Sheet
@@ -85,7 +94,7 @@ export function JobDetail({
               soft
               bordered={false}
               shadow="none"
-              className="min-h-full px-6 pb-16 pt-8 sm:px-8"
+              className="min-h-full px-6 pb-16 pt-8 sm:px-8 md:px-10 lg:px-12"
             >
               <Clip className="absolute -top-1 right-10 z-20" angle={8} color={job.tone} />
               <Tape className="-top-3 left-8" color="yellow" angle={-4} width={110} height={26} />
@@ -198,6 +207,19 @@ export function JobDetail({
                 >
                   {modeCta(mode)}
                 </button>
+                {onAddToApplyList ? (
+                  <button
+                    type="button"
+                    onClick={onAddToApplyList}
+                    aria-pressed={onApplyList}
+                    className={cn(
+                      "focus-ink border-2 border-ink px-4 py-3 font-display text-base font-black uppercase outline-none",
+                      onApplyList ? "bg-blue text-paper" : "bg-paper hover:bg-blue-wash",
+                    )}
+                  >
+                    {onApplyList ? "On apply list" : applyListCta()}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={onMarkApplied}
@@ -211,9 +233,7 @@ export function JobDetail({
                 <p className="tag text-ink-faint">
                   {mode === "manual"
                     ? "Manual mode opens the employer link. Nothing is auto-submitted."
-                    : mode === "quick"
-                      ? "Quick mode opens a materials packet from Profile, then the employer link."
-                      : "Auto mode adds roles to your local queue. Nothing is auto-submitted."}
+                    : "Quick mode opens a materials packet from Profile. Use the apply list to batch several roles — you still submit on each employer site."}
                 </p>
               </div>
 

@@ -18,6 +18,7 @@ import {
 import {
   EXPERIENCE_TYPE_LABELS,
   type ExperienceRecord,
+  type ExperienceSource,
   type ExperienceType,
 } from "@/types/profile";
 import { cn } from "@/lib/utils";
@@ -65,11 +66,14 @@ function fromRecord(exp: ExperienceRecord): ExperienceInput {
 export function ExperienceEditor({
   userId,
   initial,
+  createSource = "manual",
   onClose,
   onSaved,
 }: {
   userId: string;
   initial: ExperienceRecord | null;
+  /** Source tag for newly created rows (manual = not on current resume). */
+  createSource?: ExperienceSource;
   onClose: () => void;
   onSaved: (list: ExperienceRecord[]) => void;
 }) {
@@ -104,7 +108,7 @@ export function ExperienceEditor({
       await updateExperience(userId, experienceId, input);
       return experienceId;
     }
-    const created = await createExperience(userId, input);
+    const created = await createExperience(userId, { ...input, source: createSource });
     setExperienceId(created.id);
     return created.id;
   };
@@ -142,7 +146,11 @@ export function ExperienceEditor({
     <Sheet tone="paper-2" shadow="hard" className="relative mt-4 px-4 py-5 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-display text-[1.25rem] font-black uppercase">
-          {initial ? "Edit experience" : "New experience"}
+          {initial
+            ? "Edit experience"
+            : createSource === "manual"
+              ? "Add experience not on resume"
+              : "New experience"}
         </p>
         <PinkHoverButton variant="closeSm" onClick={onClose}>
           Close

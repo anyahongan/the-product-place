@@ -4,7 +4,7 @@ import { Reveal } from "@/components/paper/Reveal";
 import { formatShortDate, EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from "@/data/apply";
 import { eligibilityLabel } from "@/lib/apply/normalization/roleEligibility";
 import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
-import { modeCta } from "@/components/apply/modeCta";
+import { modeCta, applyListCta } from "@/components/apply/modeCta";
 import { cn } from "@/lib/utils";
 import type { ApplicationMode } from "@/types/apply";
 import type { JobListingView } from "@/lib/apply/types";
@@ -17,9 +17,11 @@ export function JobListing({
   mode,
   saved,
   applied,
+  onApplyList = false,
   onView,
   onSave,
   onApply,
+  onAddToApplyList,
   onMarkApplied,
 }: {
   job: JobListingView;
@@ -27,9 +29,11 @@ export function JobListing({
   mode: ApplicationMode;
   saved: boolean;
   applied: boolean;
+  onApplyList?: boolean;
   onView: () => void;
   onSave: () => void;
   onApply: () => void;
+  onAddToApplyList?: () => void;
   onMarkApplied: () => void;
 }) {
   const reduced = useReducedMotion();
@@ -123,6 +127,19 @@ export function JobListing({
               >
                 {modeCta(mode)}
               </button>
+              {onAddToApplyList ? (
+                <button
+                  type="button"
+                  onClick={onAddToApplyList}
+                  aria-pressed={onApplyList}
+                  className={cn(
+                    "focus-ink border-2 border-ink px-3 py-2 font-display text-sm font-black uppercase outline-none",
+                    onApplyList ? "bg-blue text-paper" : "bg-paper hover:bg-blue-wash",
+                  )}
+                >
+                  {onApplyList ? "On apply list" : applyListCta()}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={onMarkApplied}

@@ -152,14 +152,18 @@ export function Clip({
   angle = 0,
   size = 56,
   color = "ink",
+  fill,
 }: {
   className?: string;
   angle?: number;
   size?: number;
   color?: "ink" | "blue" | "pink" | "purple" | "green" | "yellow";
+  /** Override fill — e.g. a wash shade in the same color family as the header. */
+  fill?: string;
 }) {
   const slotStroke =
     color === "yellow" || color === "green" ? "var(--ink)" : "var(--paper)";
+  const clipFill = fill ?? `var(--${color})`;
   return (
     <svg
       aria-hidden
@@ -171,7 +175,7 @@ export function Clip({
     >
       <path
         d="M4 6h32v34l-16 12L4 40Z"
-        fill={`var(--${color})`}
+        fill={clipFill}
         stroke="var(--ink)"
         strokeWidth="2"
       />

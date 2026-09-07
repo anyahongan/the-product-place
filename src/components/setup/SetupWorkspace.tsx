@@ -16,6 +16,9 @@ import {
   updateWorkModes,
 } from "@/lib/profile/profileRepository";
 import { uploadMasterResume } from "@/lib/profile/resumeRepository";
+import { parseResumeExperiencesFn } from "@/lib/profile/parseResumeExperiences.server";
+import { syncResumeExperiences } from "@/lib/profile/experienceRepository";
+import { fileToBase64 } from "@/lib/profile/resumeFileEncoding";
 import {
   TARGET_PRODUCT_ROLES,
   type ProfileBasics,
@@ -371,6 +374,9 @@ export function SetupWorkspace() {
     try {
       const doc = await uploadMasterResume(user.id, file);
       setMasterResume(doc);
+      const pdfBase64 = await fileToBase64(file);
+      const result = await parseResumeExperiencesFn({ data: { pdfBase64 } });
+      await syncResumeExperiences(user.id, result.experiences);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
@@ -694,8 +700,8 @@ export function SetupWorkspace() {
                 Add your master resume
               </h2>
               <p className="mt-3 max-w-[40ch] text-[0.98rem] text-ink-soft">
-                Upload the resume you currently use most often. You can replace or update it anytime
-                in Profile.
+                Upload the resume you currently use most often. We&apos;ll parse roles into your
+                experience library automatically. You can replace or update it anytime in Profile.
               </p>
               <p className="tag mt-2 text-ink-faint">Optional · PDF only · private storage</p>
 

@@ -6,7 +6,9 @@ export function loadApplicationMode(): ApplicationMode {
   if (typeof window === "undefined") return "manual";
   try {
     const raw = window.localStorage.getItem(MODE_KEY);
-    if (raw === "manual" || raw === "quick" || raw === "auto") return raw;
+    if (raw === "manual" || raw === "quick") return raw;
+    // Legacy: Auto mode merged into Quick (apply list + batch walkthrough).
+    if (raw === "auto") return "quick";
   } catch {
     /* ignore */
   }

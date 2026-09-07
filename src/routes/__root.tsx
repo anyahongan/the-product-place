@@ -15,6 +15,7 @@ import { SiteHeader } from "../components/SiteHeader";
 import { RecruitingProvider } from "@/components/recruiting/RecruitingProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { OnboardingGate } from "@/components/auth/OnboardingGate";
+import { PageSessionManager } from "@/components/navigation/PageSessionManager";
 
 function NotFoundComponent() {
   return (
@@ -138,6 +139,7 @@ function RootComponent() {
         <RecruitingProvider>
           <SiteHeader />
           <OnboardingGate>
+            <PageSessionManager />
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
           </OnboardingGate>

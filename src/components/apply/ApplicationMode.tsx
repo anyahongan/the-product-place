@@ -15,12 +15,8 @@ const modes: {
   {
     id: "quick",
     label: "Quick",
-    blurb: "Opens a materials packet from your Profile, then the employer link. You still submit.",
-  },
-  {
-    id: "auto",
-    label: "Auto",
-    blurb: "Queues roles locally and walks you through opening them. Never auto-submits.",
+    blurb:
+      "Materials packet from Profile, optional apply list, and batch walkthrough. You review and submit — nothing is auto-submitted.",
   },
 ];
 
@@ -46,7 +42,7 @@ export function ApplicationMode({
       <div
         role="radiogroup"
         aria-label="Application mode"
-        className="relative grid grid-cols-3 border-b-2 border-ink"
+        className="relative grid grid-cols-2 border-b-2 border-ink"
       >
         {modes.map((mode) => {
           const selected = value === mode.id;

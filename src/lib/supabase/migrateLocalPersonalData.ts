@@ -1,5 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { listApplications, listAutoQueueIds, listSavedJobIds } from "@/lib/apply/repositories/applicationRepository";
+import { listApplications, listApplyListIds, listSavedJobIds } from "@/lib/apply/repositories/applicationRepository";
 import { listContacts, listNotes, listContactApplicationLinks } from "@/lib/recruiting/networkRepository";
 import type { ApplicationRecord } from "@/lib/apply/types";
 import type { NetworkContact, NetworkNote } from "@/types/network";
@@ -33,7 +33,7 @@ export async function migrateLocalPersonalData(userId: string): Promise<{
   const notes = listNotes();
   const links = listContactApplicationLinks();
   const saved = listSavedJobIds();
-  const queue = listAutoQueueIds();
+  const queue = listApplyListIds();
 
   // Applications + status events
   const appIdMap = new Map<string, string>();

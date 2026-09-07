@@ -7,13 +7,13 @@ import {
   createAppliedRecord,
   createImportedApplicationRecord,
   findApplicationByJobId,
+  listApplyListIds,
   listApplications,
-  listAutoQueueIds,
   listSavedJobIds,
   mergeImportedIntoApp,
   normalizeApplicationRecord,
   saveApplications,
-  saveAutoQueueIds,
+  saveApplyListIds,
   saveSavedJobIds,
   upsertApplication,
 } from "@/lib/apply/repositories/applicationRepository";
@@ -94,7 +94,7 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     setNotes(personal.notes);
     setLinks(personal.links);
     setSavedIds(new Set(listSavedJobIds()));
-    setQueueIds(new Set(listAutoQueueIds()));
+    setQueueIds(new Set(listApplyListIds()));
     setPersistenceMode("local");
     setCloudReady(false);
     setHydrated(true);
@@ -175,7 +175,7 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || persistenceMode !== "local") return;
-    saveAutoQueueIds([...queueIds]);
+    saveApplyListIds([...queueIds]);
   }, [queueIds, hydrated, persistenceMode]);
 
   useEffect(() => {
@@ -279,46 +279,23 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     [persistenceMode, user, apps, queueIds],
   );
 
-  const addToAutoQueue = useCallback(
+  const addToApplyList = useCallback(
     (job: JobListingView) => {
       setQueueIds((prev) => new Set(prev).add(job.id));
       setSavedIds((prev) => new Set(prev).add(job.id));
-      setCompanies((prevCompanies) => {
-        const { companies: nextCompanies, company } = upsertCompanyByName(
-          prevCompanies,
-          job.company,
-          job.tone === "pink" ? "blue" : job.tone,
-        );
-        if (persistenceMode !== "supabase" || !user) {
-          setApps((prev) => {
-            const existing = findApplicationByJobId(prev, job.id);
-            if (existing) {
-              return upsertApplication(prev, {
-                ...existing,
-                autoQueued: true,
-                companyId: existing.companyId || company.id,
-              });
-            }
-            return upsertApplication(prev, {
-              ...createAppliedRecord(job, "Saved", company.id),
-              autoQueued: true,
-            });
-          });
-          return nextCompanies;
-        }
 
-        void setSavedAutoQueue(user.id, job.id, true)
-          .then(() => setPersistError(null))
-          .catch((e) =>
-            setPersistError(e instanceof Error ? e.message : "Failed to update auto-queue"),
-          );
-        return nextCompanies;
-      });
+      if (persistenceMode !== "supabase" || !user) return;
+
+      void setSavedAutoQueue(user.id, job.id, true)
+        .then(() => setPersistError(null))
+        .catch((e) =>
+          setPersistError(e instanceof Error ? e.message : "Failed to update apply list"),
+        );
     },
     [persistenceMode, user],
   );
 
-  const removeFromAutoQueue = useCallback(
+  const removeFromApplyList = useCallback(
     (jobId: string) => {
       setQueueIds((prev) => {
         const next = new Set(prev);
@@ -332,7 +309,7 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
         void setSavedAutoQueue(user.id, jobId, false)
           .then(() => setPersistError(null))
           .catch((e) =>
-            setPersistError(e instanceof Error ? e.message : "Failed to update auto-queue"),
+            setPersistError(e instanceof Error ? e.message : "Failed to update apply list"),
           );
       }
     },
@@ -615,8 +592,8 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     links,
     toggleSaved,
     markApplied,
-    addToAutoQueue,
-    removeFromAutoQueue,
+    addToApplyList,
+    removeFromApplyList,
     setStatus,
     updateApplication,
     updateContact,

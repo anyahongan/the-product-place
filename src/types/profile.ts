@@ -19,6 +19,9 @@ export type ExperienceType =
   | "volunteer"
   | "other";
 
+/** resume = parsed from master resume; manual = added outside the current resume. */
+export type ExperienceSource = "resume" | "manual";
+
 export type ResumeDocumentType = "MASTER_RESUME" | "TAILORED_RESUME";
 
 export type ProfileBasics = {
@@ -106,6 +109,8 @@ export type ExperienceRecord = {
   caseStudyUrl: string | null;
   productType: string | null;
   projectStatus: string | null;
+  source: ExperienceSource;
+  resumeKey: string | null;
   sortOrder: number;
   bullets: ExperienceBullet[];
   metrics: ExperienceMetric[];
@@ -139,6 +144,11 @@ export const EXPERIENCE_TYPE_LABELS: Record<ExperienceType, string> = {
   extracurricular: "Extracurricular",
   volunteer: "Volunteer",
   other: "Other",
+};
+
+export const EXPERIENCE_SOURCE_LABELS: Record<ExperienceSource, string> = {
+  resume: "From resume",
+  manual: "Not on resume",
 };
 
 export const WORK_AUTH_OPTIONS: { value: WorkAuthorizationStatus; label: string }[] = [

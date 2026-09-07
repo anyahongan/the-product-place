@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { usePageDraft } from "@/hooks/usePageDraft";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
 import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
 import { NetworkingSuggestions } from "@/components/apply/NetworkingSuggestions";
@@ -99,15 +100,18 @@ export function AppliedApplicationCard({
   const progress = toProgress(app);
   const { notes, contacts } = useRecruiting();
   const [oaOpen, setOaOpen] = useState(false);
-  const [notesDraft, setNotesDraft] = useState(app.experienceNotes);
+  const [notesDraft, setNotesDraft, clearNotesDraft] = usePageDraft(
+    `apply:notes:${app.applicationId}`,
+    app.experienceNotes,
+  );
   const materialsSummary = materialsRequiredSummary(app.materialsRequired);
   const showOaPrep =
     isOpenOnlineAssessment(app) || app.currentStatus === "Online Assessment";
   const oaGuide = getOnlineAssessmentGuide(app.company);
 
   useEffect(() => {
-    setNotesDraft(app.experienceNotes);
-  }, [app.applicationId, app.experienceNotes]);
+    setNotesDraft((prev) => (prev === app.experienceNotes ? prev : prev || app.experienceNotes));
+  }, [app.applicationId, app.experienceNotes, setNotesDraft]);
 
   useEffect(() => {
     if (!openOaOnMount) return;
@@ -317,6 +321,7 @@ export function AppliedApplicationCard({
                   onBlur={() => {
                     if (notesDraft !== app.experienceNotes) {
                       onUpdateApplication({ experienceNotes: notesDraft });
+                      clearNotesDraft();
                     }
                   }}
                   rows={5}

@@ -24,6 +24,7 @@ import {
 import { gradePracticeFn } from "@/lib/learning/gradePractice.server";
 import type { PracticeGradeResult } from "@/lib/learning/practiceGrade";
 import { stopSpeaking } from "@/lib/learning/useSpeechOutput";
+import { usePageDraft } from "@/hooks/usePageDraft";
 import { useEffect, useMemo, useState } from "react";
 
 export type MockView = "hub" | "guide" | "technical" | "behavioral" | "session";
@@ -219,7 +220,10 @@ function MockSession({
   target: PracticeTarget;
   onBack: () => void;
 }) {
-  const [response, setResponse] = useState("");
+  const [response, setResponse] = usePageDraft(
+    `practice:mock:${track}:${title}`,
+    "",
+  );
   const [grade, setGrade] = useState<PracticeGradeResult | null>(null);
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);

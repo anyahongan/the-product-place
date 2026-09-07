@@ -25,10 +25,13 @@ import {
   replaceMasterResume,
   uploadMasterResume,
 } from "@/lib/profile/resumeRepository";
-import { moveExperience } from "@/lib/profile/experienceRepository";
+import { moveExperience, syncResumeExperiences } from "@/lib/profile/experienceRepository";
+import { parseResumeExperiencesFn } from "@/lib/profile/parseResumeExperiences.server";
+import { blobToBase64, fileToBase64 } from "@/lib/profile/resumeFileEncoding";
 import { notifyProfileUpdated } from "@/lib/profile/profileEvents";
 import {
   DEFAULT_ANSWER_PROMPTS,
+  EXPERIENCE_SOURCE_LABELS,
   EXPERIENCE_TYPE_LABELS,
   TARGET_PRODUCT_ROLES,
   WORK_AUTH_OPTIONS,
@@ -150,10 +153,13 @@ export function ProfileWorkspace() {
   const [detailsState, setDetailsState] = useState<SaveState>("idle");
   const [targetsState, setTargetsState] = useState<SaveState>("idle");
   const [resumeState, setResumeState] = useState<SaveState>("idle");
+  const [parseState, setParseState] = useState<SaveState>("idle");
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
   const [answerState, setAnswerState] = useState<SaveState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [editingExperienceId, setEditingExperienceId] = useState<string | null | "new">(null);
+  const [newExperienceSource, setNewExperienceSource] = useState<"manual" | "resume">("manual");
   const [newAnswerLabel, setNewAnswerLabel] = useState("");
   const [newAnswerBody, setNewAnswerBody] = useState("");
 
@@ -344,6 +350,46 @@ export function ProfileWorkspace() {
     }
   };
 
+  const parseResumeIntoFactBank = async (file: File) => {
+    setParseState("saving");
+    setParseWarnings([]);
+    setErrorMsg(null);
+    try {
+      const pdfBase64 = await fileToBase64(file);
+      const result = await parseResumeExperiencesFn({ data: { pdfBase64 } });
+      const list = await syncResumeExperiences(user.id, result.experiences);
+      setExperiences(list);
+      setParseWarnings(result.warnings);
+      setParseState("saved");
+      notifyProfileUpdated();
+    } catch (e) {
+      setParseState("error");
+      setErrorMsg(e instanceof Error ? e.message : "Could not parse resume.");
+    }
+  };
+
+  const reparseMasterResume = async () => {
+    if (!masterResume) return;
+    setParseState("saving");
+    setParseWarnings([]);
+    setErrorMsg(null);
+    try {
+      const url = await getMasterResumeSignedUrl(user.id, masterResume.storagePath, 120);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Could not download resume for parsing.");
+      const pdfBase64 = await blobToBase64(await res.blob());
+      const result = await parseResumeExperiencesFn({ data: { pdfBase64 } });
+      const list = await syncResumeExperiences(user.id, result.experiences);
+      setExperiences(list);
+      setParseWarnings(result.warnings);
+      setParseState("saved");
+      notifyProfileUpdated();
+    } catch (e) {
+      setParseState("error");
+      setErrorMsg(e instanceof Error ? e.message : "Could not parse resume.");
+    }
+  };
+
   const onResumeFile = async (file: File | null) => {
     if (!file) return;
     setResumeState("saving");
@@ -354,6 +400,7 @@ export function ProfileWorkspace() {
         : await uploadMasterResume(user.id, file);
       setMasterResume(doc);
       setResumeState("saved");
+      await parseResumeIntoFactBank(file);
     } catch (e) {
       setResumeState("error");
       setErrorMsg(e instanceof Error ? e.message : "Upload failed");
@@ -881,7 +928,7 @@ export function ProfileWorkspace() {
         <Section
           eyebrow="Master resume"
           title="Baseline document"
-          hint="Private PDF upload. The Experience Library below stays separate — editing facts does not change this file."
+          hint="Private PDF upload. Uploading or re-parsing fills the Experience Library below from this file. Manual entries stay when you replace the resume."
           tone="green"
         >
           {!masterResume ? (
@@ -912,6 +959,14 @@ export function ProfileWorkspace() {
                 <PinkHoverButton variant="ink" hoverAccent="green" onClick={() => void openResume()}>
                   View / download
                 </PinkHoverButton>
+                <PinkHoverButton
+                  variant="paper"
+                  hoverAccent="green"
+                  disabled={parseState === "saving"}
+                  onClick={() => void reparseMasterResume()}
+                >
+                  Re-parse into fact bank
+                </PinkHoverButton>
                 <label className="inline-block">
                   <span className="sr-only">Replace resume</span>
                   <input
@@ -925,26 +980,56 @@ export function ProfileWorkspace() {
             </div>
           )}
           <SaveStatus state={resumeState} error={errorMsg} />
+          <SaveStatus state={parseState} error={parseState === "error" ? errorMsg : null} />
+          {parseWarnings.length > 0 && (
+            <ul className="mt-2 space-y-1 text-[0.88rem] text-ink-soft">
+              {parseWarnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          )}
         </Section>
 
         <Section
           eyebrow="Experience library"
           title="Fact bank"
-          hint="Structured experiences and bullets future tailoring must use. Do not invent metrics."
+          hint={
+            masterResume
+              ? "Roles and bullets parsed from your master resume, plus any experiences you add that are not on your current resume (e.g. tailored versions). Do not invent metrics."
+              : "Upload a master resume to auto-fill this library, or add experiences manually."
+          }
           tone="yellow"
         >
           {experiences.length === 0 && editingExperienceId === null ? (
             <div className="border-2 border-dashed border-ink/50 bg-paper px-4 py-8">
               <p className="font-display text-[1.2rem] font-black uppercase">
-                No experiences added yet
+                {masterResume ? "No experiences parsed yet" : "No experiences added yet"}
               </p>
               <p className="mt-2 max-w-xl text-ink-soft">
-                Build a factual library of internships, projects, leadership, and work you can reuse
-                across applications.
+                {masterResume
+                  ? "Re-parse your master resume, or add roles that are not on your current resume."
+                  : "Upload a master resume to populate this library automatically, or add experiences by hand."}
               </p>
-              <div className="mt-4">
-                <PinkHoverButton variant="ink" hoverAccent="yellow" onClick={() => setEditingExperienceId("new")}>
-                  Add experience
+              <div className="mt-4 flex flex-wrap gap-2">
+                {masterResume ? (
+                  <PinkHoverButton
+                    variant="ink"
+                    hoverAccent="yellow"
+                    disabled={parseState === "saving"}
+                    onClick={() => void reparseMasterResume()}
+                  >
+                    Parse from resume
+                  </PinkHoverButton>
+                ) : null}
+                <PinkHoverButton
+                  variant={masterResume ? "paper" : "ink"}
+                  hoverAccent="yellow"
+                  onClick={() => {
+                    setNewExperienceSource("manual");
+                    setEditingExperienceId("new");
+                  }}
+                >
+                  {masterResume ? "Add experience not on resume" : "Add experience"}
                 </PinkHoverButton>
               </div>
             </div>
@@ -954,9 +1039,19 @@ export function ProfileWorkspace() {
                 <Sheet key={exp.id} tone="paper" shadow="hard-sm" className="px-4 py-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="tag text-ink-faint">
-                        {EXPERIENCE_TYPE_LABELS[exp.experienceType]}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="tag text-ink-faint">
+                          {EXPERIENCE_TYPE_LABELS[exp.experienceType]}
+                        </p>
+                        <span
+                          className={cn(
+                            "border-2 border-ink px-2 py-0.5 tag uppercase",
+                            exp.source === "resume" ? "bg-green-wash" : "bg-yellow-wash",
+                          )}
+                        >
+                          {EXPERIENCE_SOURCE_LABELS[exp.source]}
+                        </span>
+                      </div>
                       <p className="mt-1 font-display text-[1.35rem] font-black uppercase leading-none">
                         {exp.organization}
                       </p>
@@ -1016,9 +1111,28 @@ export function ProfileWorkspace() {
                 </Sheet>
               ))}
               {editingExperienceId === null && (
-                <PinkHoverButton variant="ink" hoverAccent="yellow" onClick={() => setEditingExperienceId("new")}>
-                  Add experience
-                </PinkHoverButton>
+                <div className="flex flex-wrap gap-2">
+                  {masterResume ? (
+                    <PinkHoverButton
+                      variant="paper"
+                      hoverAccent="yellow"
+                      disabled={parseState === "saving"}
+                      onClick={() => void reparseMasterResume()}
+                    >
+                      Re-parse from resume
+                    </PinkHoverButton>
+                  ) : null}
+                  <PinkHoverButton
+                    variant="ink"
+                    hoverAccent="yellow"
+                    onClick={() => {
+                      setNewExperienceSource("manual");
+                      setEditingExperienceId("new");
+                    }}
+                  >
+                    {masterResume ? "Add experience not on resume" : "Add experience"}
+                  </PinkHoverButton>
+                </div>
               )}
             </div>
           )}
@@ -1026,6 +1140,7 @@ export function ProfileWorkspace() {
           {editingExperienceId !== null && (
             <ExperienceEditor
               userId={user.id}
+              createSource={newExperienceSource}
               initial={
                 editingExperienceId === "new"
                   ? null
@@ -1039,33 +1154,6 @@ export function ProfileWorkspace() {
               }}
             />
           )}
-        </Section>
-
-        <Section eyebrow="Links" title="Quick links" tone="blue">
-          <ul className="space-y-2 text-[0.95rem]">
-            {[
-              ["LinkedIn", details.linkedinUrl],
-              ["GitHub", details.githubUrl],
-              ["Portfolio", details.portfolioUrl],
-              ["Website", details.websiteUrl],
-            ].map(([label, url]) => (
-              <li key={label}>
-                <span className="tag text-ink-faint">{label}</span>{" "}
-                {url ? (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline decoration-2 underline-offset-2"
-                  >
-                    {url}
-                  </a>
-                ) : (
-                  <span className="text-ink-soft">—</span>
-                )}
-              </li>
-            ))}
-          </ul>
         </Section>
 
         <Section

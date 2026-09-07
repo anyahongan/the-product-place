@@ -16,7 +16,7 @@ export type EmploymentType = "internship" | "part-time" | "full-time";
 export type JobSort =
   "due-date" | "opening-date" | "best-match" | "oldest-opening" | "company" | "newest" | "oldest";
 
-export type ApplicationMode = "manual" | "quick" | "auto";
+export type ApplicationMode = "manual" | "quick";
 
 export type LifecycleTab = "apply" | "applied" | "interviewing";
 

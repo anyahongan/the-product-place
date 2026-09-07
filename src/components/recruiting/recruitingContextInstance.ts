@@ -25,8 +25,8 @@ export type RecruitingContextValue = {
   links: ContactApplicationLink[];
   toggleSaved: (jobId: string) => void;
   markApplied: (job: JobListingView) => void;
-  addToAutoQueue: (job: JobListingView) => void;
-  removeFromAutoQueue: (jobId: string) => void;
+  addToApplyList: (job: JobListingView) => void;
+  removeFromApplyList: (jobId: string) => void;
   setStatus: (applicationId: string, status: ApplicationLifecycleStatus) => void;
   updateApplication: (
     applicationId: string,

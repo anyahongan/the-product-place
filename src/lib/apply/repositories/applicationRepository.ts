@@ -14,7 +14,8 @@ import type { AppliedImportRow } from "@/lib/apply/parseAppliedImport";
 
 const STORAGE_KEY = "tpp.apply.applications.v1";
 const SAVED_KEY = "tpp.apply.saved.v1";
-const QUEUE_KEY = "tpp.apply.autoQueue.v1";
+const APPLY_LIST_KEY = "tpp.apply.quickList.v1";
+const LEGACY_AUTO_QUEUE_KEY = "tpp.apply.autoQueue.v1";
 
 export function normalizeApplicationRecord(app: ApplicationRecord): ApplicationRecord {
   return {
@@ -41,13 +42,31 @@ export function saveSavedJobIds(ids: string[]) {
   writeJson(SAVED_KEY, ids);
 }
 
-export function listAutoQueueIds(): string[] {
-  return readJson<string[]>(QUEUE_KEY, []);
+export function listApplyListIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const current = readJson<string[]>(APPLY_LIST_KEY, []);
+    if (current.length > 0) return current;
+    const legacy = readJson<string[]>(LEGACY_AUTO_QUEUE_KEY, []);
+    if (legacy.length > 0) {
+      writeJson(APPLY_LIST_KEY, legacy);
+      return legacy;
+    }
+    return [];
+  } catch {
+    return readJson<string[]>(APPLY_LIST_KEY, []);
+  }
 }
 
-export function saveAutoQueueIds(ids: string[]) {
-  writeJson(QUEUE_KEY, ids);
+export function saveApplyListIds(ids: string[]) {
+  writeJson(APPLY_LIST_KEY, ids);
 }
+
+/** @deprecated Use listApplyListIds */
+export const listAutoQueueIds = listApplyListIds;
+
+/** @deprecated Use saveApplyListIds */
+export const saveAutoQueueIds = saveApplyListIds;
 
 export function createAppliedRecord(
   job: JobListingView,

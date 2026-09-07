@@ -6,6 +6,8 @@ import {
   type ApplyMaterialTemplates,
 } from "@/lib/apply/applyMaterialTemplates";
 import { applyBlueBtn, applyBlueGhostBtnSm } from "@/components/apply/applyUi";
+import type { ApplyJobTheme } from "@/components/apply/applyJobTheme";
+import { cn } from "@/lib/utils";
 
 export function ApplyMaterialsSection({
   materials,
@@ -13,6 +15,7 @@ export function ApplyMaterialsSection({
   error,
   onGenerate,
   userId,
+  theme,
   compact = false,
 }: {
   materials: ApplyMaterialsResult | null;
@@ -20,6 +23,7 @@ export function ApplyMaterialsSection({
   error: string | null;
   onGenerate: (templates: ApplyMaterialTemplates) => void;
   userId: string | null;
+  theme?: ApplyJobTheme;
   compact?: boolean;
 }) {
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +61,10 @@ export function ApplyMaterialsSection({
     }));
   };
 
+  const primaryBtn = theme?.primaryBtn ?? applyBlueBtn;
+  const ghostBtnSm = theme?.paperBtnSm ?? applyBlueGhostBtnSm;
+  const accentText = theme?.accentText ?? "text-blue";
+
   return (
     <section className={compact ? "mt-4" : "mt-6"}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -65,7 +73,7 @@ export function ApplyMaterialsSection({
           type="button"
           disabled={busy}
           onClick={() => onGenerate(templates)}
-          className={applyBlueBtn}
+          className={primaryBtn}
         >
           {busy ? "Generating…" : materials ? "Regenerate" : "Generate resume + cover letter"}
         </button>
@@ -103,14 +111,14 @@ export function ApplyMaterialsSection({
           <button
             type="button"
             onClick={() => resumeInputRef.current?.click()}
-            className={applyBlueGhostBtnSm}
+            className={ghostBtnSm}
           >
             Upload resume template
           </button>
           <button
             type="button"
             onClick={() => coverInputRef.current?.click()}
-            className={applyBlueGhostBtnSm}
+            className={ghostBtnSm}
           >
             Upload cover letter template
           </button>
@@ -122,7 +130,7 @@ export function ApplyMaterialsSection({
                 <span>Resume: {templates.resumeFileName}</span>
                 <button
                   type="button"
-                  className="tag text-blue underline-offset-2 hover:underline"
+                  className={cn("tag underline-offset-2 hover:underline", accentText)}
                   onClick={() =>
                     setTemplates((prev) => ({
                       ...prev,
@@ -140,7 +148,7 @@ export function ApplyMaterialsSection({
                 <span>Cover letter: {templates.coverLetterFileName}</span>
                 <button
                   type="button"
-                  className="tag text-blue underline-offset-2 hover:underline"
+                  className={cn("tag underline-offset-2 hover:underline", accentText)}
                   onClick={() =>
                     setTemplates((prev) => ({
                       ...prev,
@@ -180,7 +188,7 @@ export function ApplyMaterialsSection({
               <button
                 type="button"
                 onClick={() => void copy("resume", materials.resumeText)}
-                className={applyBlueGhostBtnSm}
+                className={ghostBtnSm}
               >
                 {copied === "resume" ? "Copied" : "Copy"}
               </button>
@@ -195,7 +203,7 @@ export function ApplyMaterialsSection({
               <button
                 type="button"
                 onClick={() => void copy("cover", materials.coverLetterText)}
-                className={applyBlueGhostBtnSm}
+                className={ghostBtnSm}
               >
                 {copied === "cover" ? "Copied" : "Copy"}
               </button>
