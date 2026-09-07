@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
 import { ApplyMaterialsSection } from "@/components/apply/ApplyMaterialsSection";
-import { EMPLOYMENT_TYPE_LABELS, formatShortDate, WORK_MODE_LABELS } from "@/data/apply";
+import { formatShortDate, EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from "@/data/apply";
+import { eligibilityLabel } from "@/lib/apply/normalization/roleEligibility";
 import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
 import { modeCta } from "@/components/apply/modeCta";
 import { generateMaterialsForJob } from "@/lib/apply/generateMaterialsForJob";
@@ -131,13 +132,22 @@ export function JobDetail({
                 <span className="tag border-2 border-ink bg-blue px-2 py-1 text-paper">
                   {job.productRole}
                 </span>
-                <span className="tag border-2 border-ink bg-paper px-2 py-1">
-                  {job.location} ·{" "}
-                  {job.workMode ? WORK_MODE_LABELS[job.workMode] : "Work mode unknown"}
-                </span>
-                <span className="tag border-2 border-ink bg-paper px-2 py-1">
-                  {job.employmentType ? EMPLOYMENT_TYPE_LABELS[job.employmentType] : "Type unknown"}
-                </span>
+                {job.location && job.location !== "Location not specified" && (
+                  <span className="tag border-2 border-ink bg-paper px-2 py-1">
+                    {job.location}
+                    {job.workMode ? ` · ${WORK_MODE_LABELS[job.workMode]}` : ""}
+                  </span>
+                )}
+                {job.workMode && (!job.location || job.location === "Location not specified") && (
+                  <span className="tag border-2 border-ink bg-paper px-2 py-1">
+                    {WORK_MODE_LABELS[job.workMode]}
+                  </span>
+                )}
+                {job.employmentType && (
+                  <span className="tag border-2 border-ink bg-paper px-2 py-1">
+                    {EMPLOYMENT_TYPE_LABELS[job.employmentType]}
+                  </span>
+                )}
               </div>
 
               <dl className="mt-6 grid gap-2 border-y-2 border-ink py-4 text-[0.95rem]">
@@ -151,11 +161,7 @@ export function JobDetail({
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="tag text-ink-faint">Eligibility</dt>
-                  <dd>
-                    {job.graduationYears.length
-                      ? `’${job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}`
-                      : "Not specified"}
-                  </dd>
+                  <dd>{eligibilityLabel(job) ?? "Not specified"}</dd>
                 </div>
               </dl>
 

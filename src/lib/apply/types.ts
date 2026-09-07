@@ -29,12 +29,26 @@ export type ApplicationLifecycleStatus =
   | "Preparing"
   | "Applied"
   | "Waiting"
+  | "Online Assessment"
   | "Recruiter Screen"
   | "Interviewing"
   | "Final Round"
   | "Offer"
   | "Rejected"
   | "Withdrawn";
+
+export type ApplicationMaterialsRequired = {
+  resume: boolean;
+  coverLetter: boolean;
+  transcript: boolean;
+  gpa: boolean;
+};
+
+export type OnlineAssessmentState = {
+  dueDate: string | null;
+  completed: boolean;
+  completedAt: string | null;
+};
 
 export type StatusEvent = {
   status: ApplicationLifecycleStatus;
@@ -52,8 +66,14 @@ export type ApplicationRecord = {
   dateApplied: string | null;
   currentStatus: ApplicationLifecycleStatus;
   statusHistory: StatusEvent[];
+  /** What the application portal asked the candidate to submit. */
+  materialsRequired: ApplicationMaterialsRequired;
   resumeUsed: null;
   coverLetterUsed: null;
+  /** Online assessment tracking (due date syncs to Today's list). */
+  onlineAssessment: OnlineAssessmentState;
+  /** Free-form notes on this application process. */
+  experienceNotes: string;
   applyUrl: string | null;
   sourceUrl: string | null;
   autoQueued: boolean;
@@ -103,6 +123,7 @@ export const APPLICATION_STATUSES: ApplicationLifecycleStatus[] = [
   "Preparing",
   "Applied",
   "Waiting",
+  "Online Assessment",
   "Recruiter Screen",
   "Interviewing",
   "Final Round",
@@ -110,3 +131,16 @@ export const APPLICATION_STATUSES: ApplicationLifecycleStatus[] = [
   "Rejected",
   "Withdrawn",
 ];
+
+export const DEFAULT_MATERIALS_REQUIRED: ApplicationMaterialsRequired = {
+  resume: false,
+  coverLetter: false,
+  transcript: false,
+  gpa: false,
+};
+
+export const DEFAULT_ONLINE_ASSESSMENT: OnlineAssessmentState = {
+  dueDate: null,
+  completed: false,
+  completedAt: null,
+};

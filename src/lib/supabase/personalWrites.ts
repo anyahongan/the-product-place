@@ -204,6 +204,9 @@ function jobSnapshotFromRecord(
     jobId: app.jobId,
     postedDate: app.postedDate ?? matchedJob?.postedDate ?? null,
     deadline: app.deadline ?? matchedJob?.deadline ?? null,
+    materialsRequired: app.materialsRequired,
+    onlineAssessment: app.onlineAssessment,
+    experienceNotes: app.experienceNotes,
     ...(matchedJob
       ? {
           catalogCompanyId: matchedJob.catalogCompanyId ?? null,
@@ -212,6 +215,22 @@ function jobSnapshotFromRecord(
         }
       : {}),
   };
+}
+
+export async function persistApplicationFields(
+  userId: string,
+  app: ApplicationRecord,
+): Promise<void> {
+  if (!isUuid(app.applicationId)) return;
+  const { error } = await client()
+    .from("applications")
+    .update({
+      job_snapshot: jobSnapshotFromRecord(app, null),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", app.applicationId)
+    .eq("user_id", userId);
+  if (error) throw error;
 }
 
 export async function importAppliedApplicationsBatch(

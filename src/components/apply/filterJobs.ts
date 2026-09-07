@@ -1,5 +1,9 @@
 import type { JobFiltersState } from "@/types/apply";
 import type { JobListingView } from "@/lib/apply/types";
+import {
+  matchesEmploymentFilter,
+  matchesGraduationFilter,
+} from "@/lib/apply/normalization/roleEligibility";
 
 export function filterAndSortJobs(
   jobs: JobListingView[],
@@ -21,14 +25,8 @@ export function filterAndSortJobs(
       return false;
     }
 
-    if (filters.graduationYears.length > 0) {
-      // Unknown years remain visible — source often omits eligibility
-      if (
-        job.graduationYears.length > 0 &&
-        !filters.graduationYears.some((year) => job.graduationYears.includes(year))
-      ) {
-        return false;
-      }
+    if (filters.graduationYears.length > 0 && !matchesGraduationFilter(job, filters.graduationYears)) {
+      return false;
     }
 
     if (filters.locations.length > 0 || filters.locationQuery.trim()) {
@@ -56,10 +54,8 @@ export function filterAndSortJobs(
       }
     }
 
-    if (filters.employmentTypes.length > 0) {
-      if (job.employmentType !== null && !filters.employmentTypes.includes(job.employmentType)) {
-        return false;
-      }
+    if (filters.employmentTypes.length > 0 && !matchesEmploymentFilter(job, filters.employmentTypes)) {
+      return false;
     }
 
     return true;

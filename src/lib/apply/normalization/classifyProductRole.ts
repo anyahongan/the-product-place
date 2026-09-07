@@ -12,6 +12,22 @@ export function classifyProductRole(title: string): ProductRole | null {
     return null;
   }
 
+  if (/\bchief of staff\b/.test(t)) {
+    return null;
+  }
+
+  if (
+    /\b(staff|principal|director|vp|vice president|head of|group)\b/.test(t) &&
+    /\bproduct\b/.test(t) &&
+    !/\bintern(?:ship)?\b/.test(t)
+  ) {
+    return null;
+  }
+
+  if (/\b(senior|sr\.?)\s+(product|pm)\b/.test(t) && !/\bintern(?:ship)?\b/.test(t)) {
+    return null;
+  }
+
   // Explicit engineering titles that mention "product" but are not product roles
   if (isEngineeringRole(t) && !isExplicitProductRole(t)) {
     return null;

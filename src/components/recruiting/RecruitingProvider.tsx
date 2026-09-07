@@ -11,11 +11,16 @@ import {
   listAutoQueueIds,
   listSavedJobIds,
   mergeImportedIntoApp,
+  normalizeApplicationRecord,
   saveApplications,
   saveAutoQueueIds,
   saveSavedJobIds,
   upsertApplication,
 } from "@/lib/apply/repositories/applicationRepository";
+import {
+  completeOnlineAssessmentTask,
+  syncOnlineAssessmentTask,
+} from "@/lib/apply/applicationTaskSync";
 import type { AppliedImportPlan } from "@/lib/apply/planAppliedImport";
 import type { Company, ContactApplicationLink } from "@/types/recruiting";
 import type { NetworkContact, NetworkNote } from "@/types/network";
@@ -40,6 +45,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   importAppliedApplicationsBatch,
   markJobApplied,
+  persistApplicationFields,
   persistContactChange,
   persistNotesDiff,
   saveJob,
@@ -359,6 +365,43 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     [apps, persistenceMode, user],
   );
 
+  const updateApplication = useCallback(
+    (
+      applicationId: string,
+      patch: Partial<
+        Pick<ApplicationRecord, "materialsRequired" | "onlineAssessment" | "experienceNotes">
+      >,
+    ) => {
+      setApps((prev) => {
+        const next = prev.map((a) => {
+          if (a.applicationId !== applicationId) return a;
+          return normalizeApplicationRecord({ ...a, ...patch });
+        });
+        saveApplications(next);
+        const updated = next.find((a) => a.applicationId === applicationId);
+        if (updated) {
+          syncOnlineAssessmentTask(updated);
+          if (patch.onlineAssessment?.completed) {
+            completeOnlineAssessmentTask(applicationId);
+          }
+        }
+        return next;
+      });
+
+      if (persistenceMode !== "supabase" || !user) return;
+
+      const app = apps.find((a) => a.applicationId === applicationId);
+      if (!app) return;
+      const merged = normalizeApplicationRecord({ ...app, ...patch });
+      void persistApplicationFields(user.id, merged)
+        .then(() => setPersistError(null))
+        .catch((e) => {
+          setPersistError(e instanceof Error ? e.message : "Failed to save application details");
+        });
+    },
+    [apps, persistenceMode, user],
+  );
+
   const updateContact = useCallback(
     (next: NetworkContact) => {
       const prev = contacts.find((c) => c.id === next.id);
@@ -575,6 +618,7 @@ export function RecruitingProvider({ children }: { children: ReactNode }) {
     addToAutoQueue,
     removeFromAutoQueue,
     setStatus,
+    updateApplication,
     updateContact,
     setContacts: setContactsState,
     setNotes: setNotesState,

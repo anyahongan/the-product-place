@@ -28,6 +28,15 @@ export type RecruitingContextValue = {
   addToAutoQueue: (job: JobListingView) => void;
   removeFromAutoQueue: (jobId: string) => void;
   setStatus: (applicationId: string, status: ApplicationLifecycleStatus) => void;
+  updateApplication: (
+    applicationId: string,
+    patch: Partial<
+      Pick<
+        ApplicationRecord,
+        "materialsRequired" | "onlineAssessment" | "experienceNotes"
+      >
+    >,
+  ) => void;
   updateContact: (next: NetworkContact) => void;
   setContacts: (
     next: NetworkContact[] | ((prev: NetworkContact[]) => NetworkContact[]),

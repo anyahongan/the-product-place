@@ -4,6 +4,12 @@
  */
 
 import { classifyProductRole } from "../src/lib/apply/normalization/classifyProductRole";
+import {
+  inferRoleEligibility,
+  matchesEmploymentFilter,
+  matchesGraduationFilter,
+} from "../src/lib/apply/normalization/roleEligibility";
+import { filterAndSortJobs, defaultFilters } from "../src/components/apply/filterJobs";
 import { buildDedupeKey, buildRoleDedupeKey, canonicalizeJobTitle, mergeLocations } from "../src/lib/apply/normalization/dedupe";
 import { mergeNormalizedJobs } from "../src/lib/ingestion/ingestJobs";
 import type { NormalizedJob } from "../src/lib/apply/types";
@@ -290,6 +296,67 @@ console.log("\nIngestion verification\n");
       descriptionText: "Full-time new graduate program.",
     })?.employmentType === "full-time",
   );
+}
+
+{
+  console.log("J2. Post-grad eligibility + strict student filters");
+  assert(
+    "chief of staff excluded from product feed",
+    classifyProductRole("Chief of Staff, Brokerage Product") === null,
+  );
+  const senior = {
+    title: "Chief of Staff, Brokerage Product",
+    description:
+      "You must have 8+ years of experience in product management. This is a full-time role.",
+    employmentType: null,
+    graduationYears: [] as number[],
+    company: "Robinhood",
+    id: "test-robinhood-cos",
+    productRole: "Other / Unspecified Product" as const,
+    location: "Menlo Park",
+    workMode: null,
+    postedDate: "2026-01-01",
+    deadline: null,
+    status: "open" as const,
+    matchPercent: null,
+    source: "test",
+    sourceUrl: "",
+    applicationUrl: "",
+    responsibilities: [] as string[],
+    requirements: [] as string[],
+    tone: "blue" as const,
+    closed: false,
+  };
+  assert(
+    "chief of staff post-grad",
+    inferRoleEligibility(senior.title, senior.description) === "post-grad",
+  );
+  assert(
+    "intern filter excludes chief of staff",
+    matchesEmploymentFilter(senior, ["internship"]) === false,
+  );
+  assert(
+    "2028 filter excludes chief of staff",
+    matchesGraduationFilter(senior, [2028]) === false,
+  );
+  const intern = {
+    ...senior,
+    id: "test-intern",
+    title: "Product Management Intern",
+    description: "Internship for students graduating in 2028.",
+    employmentType: "internship" as const,
+    graduationYears: [2028],
+  };
+  assert(
+    "intern passes intern + 2028 filters",
+    matchesEmploymentFilter(intern, ["internship"]) &&
+      matchesGraduationFilter(intern, [2028]),
+  );
+  const filtered = filterAndSortJobs(
+    [senior, intern],
+    { ...defaultFilters, employmentTypes: ["internship"], graduationYears: [2028] },
+  );
+  assert("filter stack keeps only intern", filtered.length === 1 && filtered[0]!.id === "test-intern");
 }
 
 {

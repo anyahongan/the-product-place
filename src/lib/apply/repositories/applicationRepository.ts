@@ -1,4 +1,8 @@
 import type { ApplicationLifecycleStatus, ApplicationRecord, StatusEvent } from "@/lib/apply/types";
+import {
+  DEFAULT_MATERIALS_REQUIRED,
+  DEFAULT_ONLINE_ASSESSMENT,
+} from "@/lib/apply/types";
 import type { JobListingView } from "@/lib/apply/types";
 import type { ToneName } from "@/types/apply";
 import { companyIdFromName } from "@/types/recruiting";
@@ -11,6 +15,15 @@ import type { AppliedImportRow } from "@/lib/apply/parseAppliedImport";
 const STORAGE_KEY = "tpp.apply.applications.v1";
 const SAVED_KEY = "tpp.apply.saved.v1";
 const QUEUE_KEY = "tpp.apply.autoQueue.v1";
+
+export function normalizeApplicationRecord(app: ApplicationRecord): ApplicationRecord {
+  return {
+    ...app,
+    materialsRequired: app.materialsRequired ?? { ...DEFAULT_MATERIALS_REQUIRED },
+    onlineAssessment: app.onlineAssessment ?? { ...DEFAULT_ONLINE_ASSESSMENT },
+    experienceNotes: app.experienceNotes ?? "",
+  };
+}
 
 export function listApplications(): ApplicationRecord[] {
   return migrateApplications(readJson<ApplicationRecord[]>(STORAGE_KEY, []));
@@ -52,8 +65,11 @@ export function createAppliedRecord(
     dateApplied: status === "Applied" || status === "Waiting" ? now.slice(0, 10) : null,
     currentStatus: status,
     statusHistory: [event],
+    materialsRequired: { ...DEFAULT_MATERIALS_REQUIRED },
     resumeUsed: null,
     coverLetterUsed: null,
+    onlineAssessment: { ...DEFAULT_ONLINE_ASSESSMENT },
+    experienceNotes: "",
     applyUrl: job.applicationUrl || null,
     sourceUrl: job.sourceUrl,
     autoQueued: false,
@@ -87,8 +103,11 @@ export function createImportedApplicationRecord(
       (status === "Applied" || status === "Waiting" ? now.slice(0, 10) : null),
     currentStatus: status,
     statusHistory: [event],
+    materialsRequired: { ...DEFAULT_MATERIALS_REQUIRED },
     resumeUsed: null,
     coverLetterUsed: null,
+    onlineAssessment: { ...DEFAULT_ONLINE_ASSESSMENT },
+    experienceNotes: "",
     applyUrl: row.applyUrl ?? matchedJob?.applicationUrl ?? null,
     sourceUrl: matchedJob?.sourceUrl ?? null,
     autoQueued: false,

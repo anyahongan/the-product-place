@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Sheet, Tape } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
 import { formatShortDate, EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from "@/data/apply";
+import { eligibilityLabel } from "@/lib/apply/normalization/roleEligibility";
 import { MatchBadge, WhyThisMatch } from "@/components/apply/MatchExplain";
 import { modeCta } from "@/components/apply/modeCta";
 import { cn } from "@/lib/utils";
@@ -34,8 +35,13 @@ export function JobListing({
   const reduced = useReducedMotion();
   const light = job.tone === "yellow" || job.tone === "green";
   const offset = offsets[index % offsets.length] ?? "";
-  const workLabel = job.workMode ? WORK_MODE_LABELS[job.workMode] : "Work mode unknown";
-  const empLabel = job.employmentType ? EMPLOYMENT_TYPE_LABELS[job.employmentType] : "Type unknown";
+  const metaParts = [
+    job.location !== "Location not specified" ? job.location : null,
+    job.workMode ? WORK_MODE_LABELS[job.workMode] : null,
+    job.employmentType ? EMPLOYMENT_TYPE_LABELS[job.employmentType] : null,
+    job.closed ? "Closed" : null,
+  ].filter(Boolean);
+  const gradLabel = eligibilityLabel(job);
   const applyDisabled =
     job.closed || (mode === "manual" && !job.applicationUrl);
 
@@ -79,16 +85,13 @@ export function JobListing({
               <span className="tag border-2 border-ink bg-paper px-2 py-1">{job.productRole}</span>
             </div>
 
-            <p className="tag mt-3 text-ink-faint">
-              {job.location} · {workLabel} · {empLabel}
-              {job.closed ? " · Closed" : ""}
-            </p>
+            {metaParts.length > 0 && (
+              <p className="tag mt-3 text-ink-faint">{metaParts.join(" · ")}</p>
+            )}
             <p className="tag mt-1 text-ink-faint">
               Posted {formatShortDate(job.postedDate)}
               {job.deadline ? ` · Due ${formatShortDate(job.deadline)}` : ""}
-              {job.graduationYears.length
-                ? ` · ’${job.graduationYears.map((y) => String(y).slice(2)).join(" / ’")}`
-                : " · Grad year unknown"}
+              {gradLabel ? ` · ${gradLabel}` : ""}
             </p>
 
             <WhyThisMatch match={job.matchResult} />

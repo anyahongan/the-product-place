@@ -1,7 +1,10 @@
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Clip, Tab } from "@/components/paper/Paper";
 import { Reveal } from "@/components/paper/Reveal";
-import { DrillSession } from "@/components/practice/DrillSession";
+import { OpenOnlineAssessmentsPanel } from "@/components/apply/OpenOnlineAssessmentsPanel";
+import { useRecruiting } from "@/components/recruiting/useRecruiting";
+import { OAPrepWorkspace } from "@/components/practice/OAPrepWorkspace";
+import { DrillSession, roleFromJobTitle } from "@/components/practice/DrillSession";
 import { MockInterviewWorkspace } from "@/components/practice/MockInterview";
 import {
   practiceBtn,
@@ -16,10 +19,12 @@ import {
 import {
   PRACTICE_QUESTIONS,
   filterPracticeQuestions,
-  getPracticeQuestion,
   pickQuickDrillQuestion,
   questionFormat,
 } from "@/lib/learning/content";
+import { resolveDrillQuestion, isOAQuestionId } from "@/lib/apply/onlineAssessmentQuestions";
+import { normalizePracticeCategory } from "@/lib/apply/onlineAssessmentGuides";
+
 import { listPracticeAttempts } from "@/lib/learning/repositories/practiceAttemptRepository";
 import type {
   PracticeAnswerFormat,
@@ -35,11 +40,14 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 export type PracticeSearch = {
-  mode?: "home" | "quick" | "bank" | "drill" | "mock";
+  mode?: "home" | "quick" | "bank" | "drill" | "mock" | "oa";
   q?: string;
   category?: PracticeCategory | "surprise" | "all";
   format?: PracticeAnswerFormat | "any";
   track?: "technical" | "behavioral";
+  company?: string;
+  appId?: string;
+  oa?: string;
 };
 
 export function PracticeWorkspace({
@@ -50,6 +58,7 @@ export function PracticeWorkspace({
   navigate: (opts: { search: PracticeSearch; replace?: boolean }) => void;
 }) {
   const { user, ready } = useAuth();
+  const { apps } = useRecruiting();
   const mode = search.mode ?? "home";
   const [attempts, setAttempts] = useState<PracticeAttemptRecord[]>([]);
 
@@ -94,8 +103,41 @@ export function PracticeWorkspace({
     [],
   );
 
+  const oaApplication = useMemo(
+    () => (search.appId ? apps.find((a) => a.applicationId === search.appId) : null),
+    [apps, search.appId],
+  );
+
+  const drillInitialTarget = useMemo(() => {
+    if (!search.company) return undefined;
+    const role = oaApplication?.title ? roleFromJobTitle(oaApplication.title) : "";
+    return {
+      company: search.company,
+      ...(role ? { role } : {}),
+      ...(isOAQuestionId(search.q ?? "") ? { interviewType: "technical" } : {}),
+    };
+  }, [search.company, search.q, oaApplication?.title]);
+
+  const drillBack = () => {
+    const fromOa =
+      search.company &&
+      (search.oa === "1" || (search.q != null && isOAQuestionId(search.q)));
+    if (fromOa) {
+      navigate({
+        search: {
+          mode: "oa",
+          company: search.company,
+          appId: search.appId,
+          oa: "1",
+        },
+      });
+      return;
+    }
+    navigate({ search: { mode: "bank" } });
+  };
+
   if (mode === "drill" && search.q) {
-    const question = getPracticeQuestion(search.q);
+    const question = resolveDrillQuestion(search.q, search.company);
     if (!question) {
       return (
         <main className="px-5 py-16 sm:px-8">
@@ -103,9 +145,9 @@ export function PracticeWorkspace({
           <button
             type="button"
             className={`mt-4 ${practiceBtn}`}
-            onClick={() => navigate({ search: { mode: "bank" } })}
+            onClick={drillBack}
           >
-            ← Question bank
+            ← {search.oa === "1" ? "OA prep" : "Question bank"}
           </button>
         </main>
       );
@@ -115,7 +157,8 @@ export function PracticeWorkspace({
         question={question}
         userId={user?.id ?? null}
         authReady={ready}
-        onBack={() => navigate({ search: { mode: "bank" } })}
+        onBack={drillBack}
+        initialTarget={drillInitialTarget}
         onSaved={(row) =>
           setAttempts((prev) => {
             const rest = prev.filter((a) => a.id !== row.id);
@@ -146,12 +189,38 @@ export function PracticeWorkspace({
     );
   }
 
+  if (mode === "oa" && search.company) {
+    return (
+      <OAPrepWorkspace
+        company={search.company}
+        application={oaApplication}
+        onOpenQuestion={(id) =>
+          navigate({
+            search: {
+              mode: "drill",
+              q: id,
+              company: search.company,
+              appId: search.appId,
+              oa: "1",
+            },
+          })
+        }
+        onBack={() => navigate({ search: { mode: "home" } })}
+      />
+    );
+  }
+
   if (mode === "bank") {
     return (
       <QuestionBank
         practicedIds={practicedIds}
         initialFormat={
           search.format && search.format !== "any" ? search.format : "all"
+        }
+        initialCategory={
+          search.category && search.category !== "surprise"
+            ? normalizePracticeCategory(search.category)
+            : "all"
         }
         onOpen={(id) => navigate({ search: { mode: "drill", q: id } })}
         onBack={() => navigate({ search: { mode: "home" } })}
@@ -184,6 +253,8 @@ export function PracticeWorkspace({
             mock loops for the interview you’re prepping for.
           </p>
         </Reveal>
+
+        <OpenOnlineAssessmentsPanel apps={apps} className="mt-10" />
 
         {/* Formats — large primary strip */}
         <section className="mt-12">
@@ -530,16 +601,22 @@ function QuestionBank({
   onOpen,
   onBack,
   initialFormat = "all",
+  initialCategory = "all",
 }: {
   practicedIds: Set<string>;
   onOpen: (id: string) => void;
   onBack: () => void;
   initialFormat?: PracticeAnswerFormat | "all";
+  initialCategory?: PracticeCategory | "all";
 }) {
-  const [category, setCategory] = useState<PracticeCategory | "all">("all");
+  const [category, setCategory] = useState<PracticeCategory | "all">(initialCategory);
   const [difficulty, setDifficulty] = useState<PracticeDifficulty | "all">("all");
   const [format, setFormat] = useState<PracticeAnswerFormat | "all">(initialFormat);
   const [practiced, setPracticed] = useState<"all" | "practiced" | "not-practiced">("all");
+
+  useEffect(() => {
+    setCategory(initialCategory);
+  }, [initialCategory]);
 
   const filtered = filterPracticeQuestions({
     category,

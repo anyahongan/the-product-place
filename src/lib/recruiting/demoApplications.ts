@@ -1,4 +1,6 @@
 import type { ApplicationLifecycleStatus, ApplicationRecord, StatusEvent } from "@/lib/apply/types";
+import { DEFAULT_MATERIALS_REQUIRED, DEFAULT_ONLINE_ASSESSMENT } from "@/lib/apply/types";
+import { normalizeApplicationRecord } from "@/lib/apply/repositories/applicationRepository";
 import { networkApplications, networkCompanies } from "@/data/network";
 import { companyIdFromName } from "@/types/recruiting";
 
@@ -10,7 +12,7 @@ export function demoApplicationRecords(): ApplicationRecord[] {
     const event: StatusEvent = { status, timestamp };
     const companyName =
       networkCompanies.find((c) => c.id === na.companyId)?.name ?? na.companyId;
-    return {
+    return normalizeApplicationRecord({
       applicationId: na.id,
       jobId: `demo-job-${na.id}`,
       companyId: na.companyId,
@@ -19,13 +21,16 @@ export function demoApplicationRecords(): ApplicationRecord[] {
       dateApplied: na.dateApplied,
       currentStatus: status,
       statusHistory: [event],
+      materialsRequired: { ...DEFAULT_MATERIALS_REQUIRED },
       resumeUsed: null,
       coverLetterUsed: null,
+      onlineAssessment: { ...DEFAULT_ONLINE_ASSESSMENT },
+      experienceNotes: "",
       applyUrl: null,
       sourceUrl: null,
       autoQueued: false,
       tone: "blue",
-    };
+    });
   });
 }
 
@@ -43,12 +48,14 @@ function mapNetworkStatus(
 /** Ensure every application has companyId; merge missing demo apps by stable id. */
 export function migrateApplications(apps: ApplicationRecord[]): ApplicationRecord[] {
   const withIds = apps.map((app) =>
-    app.companyId
-      ? app
-      : {
-          ...app,
-          companyId: companyIdFromName(app.company),
-        },
+    normalizeApplicationRecord(
+      app.companyId
+        ? app
+        : {
+            ...app,
+            companyId: companyIdFromName(app.company),
+          },
+    ),
   );
   const byId = new Map(withIds.map((a) => [a.applicationId, a]));
   for (const demo of demoApplicationRecords()) {

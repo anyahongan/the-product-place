@@ -1,5 +1,10 @@
 import type { EmploymentType, ProductRole, WorkMode } from "@/types/apply";
 import { classifyProductRole } from "@/lib/apply/normalization/classifyProductRole";
+import {
+  hasInternshipSignal,
+  inferMinimumExperienceYears,
+  inferRoleEligibility,
+} from "@/lib/apply/normalization/roleEligibility";
 
 /** Strip HTML to plain text for descriptions / parsing. */
 export function htmlToPlainText(html: string | null | undefined): string | null {
@@ -25,15 +30,7 @@ export function htmlToPlainText(html: string | null | undefined): string | null 
 }
 
 /** Explicit internship / co-op / university-recruit signals in a string. */
-function hasInternshipSignal(text: string): boolean {
-  const t = text.toLowerCase();
-  return (
-    /\bintern(?:ship)?\b/.test(t) ||
-    /\bco[\s-]?op\b/.test(t) ||
-    /\buniversity\s+(recruit|program|grad)\b/.test(t) ||
-    /\bcampus\s+(recruit|hire|program)\b/.test(t)
-  );
-}
+export { hasInternshipSignal } from "@/lib/apply/normalization/roleEligibility";
 
 /**
  * Conservative employment-type inference from title + optional text.
@@ -49,9 +46,14 @@ export function inferEmploymentType(
   if (hasInternshipSignal(title)) return "internship";
 
   const body = (text ?? "").toLowerCase();
-  if (hasInternshipSignal(body)) return "internship";
-
   const hay = `${title}\n${text ?? ""}`.toLowerCase();
+
+  if (inferRoleEligibility(title, text) === "post-grad") return "full-time";
+
+  const minYears = inferMinimumExperienceYears(hay);
+  if (minYears !== null && minYears >= 3) return "full-time";
+
+  if (hasInternshipSignal(body)) return "internship";
   if (/\bpart[\s-]?time\b/.test(hay)) return "part-time";
   if (
     /\bfull[\s-]?time\b/.test(hay) ||
@@ -219,9 +221,10 @@ export function classifyJobFields(input: {
     isRemote: input.isRemote ?? null,
   });
 
-  const graduationYears = parseGraduationYears(
-    `${input.title}\n${description ?? ""}`,
-  );
+  const graduationYears =
+    inferRoleEligibility(input.title, description) === "post-grad"
+      ? null
+      : parseGraduationYears(`${input.title}\n${description ?? ""}`);
 
   return {
     productRoleCategory,

@@ -14,6 +14,7 @@ type AppsSlice = Pick<
   | "addToAutoQueue"
   | "removeFromAutoQueue"
   | "setStatus"
+  | "updateApplication"
   | "importAppliedApplications"
 >;
 

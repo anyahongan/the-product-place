@@ -6,6 +6,7 @@ import {
   AppliedStatusFilters,
 } from "@/components/apply/AppliedApplication";
 import { AppliedImportPanel } from "@/components/apply/AppliedImportPanel";
+import { OpenOnlineAssessmentsPanel } from "@/components/apply/OpenOnlineAssessmentsPanel";
 import { useApplyContext } from "@/components/apply/useApplyContext";
 import type { ApplicationLifecycleStatus } from "@/lib/apply/types";
 
@@ -14,9 +15,11 @@ export function AppliedOverview({
 }: {
   focusApplicationId?: string;
 }) {
-  const { apps, stats, setStatus, hydrated, jobs, importAppliedApplications } = useApplyContext();
+  const { apps, stats, setStatus, updateApplication, hydrated, jobs, importAppliedApplications } =
+    useApplyContext();
   const [filter, setFilter] = useState<"all" | ApplicationLifecycleStatus>("all");
   const [openId, setOpenId] = useState<string | null>(focusApplicationId ?? null);
+  const [oaModalAppId, setOaModalAppId] = useState<string | null>(null);
   const [importBusy, setImportBusy] = useState(false);
 
   const jobById = useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
@@ -32,6 +35,7 @@ export function AppliedOverview({
       Preparing: 0,
       Applied: 0,
       Waiting: 0,
+      "Online Assessment": 0,
       "Recruiter Screen": 0,
       Interviewing: 0,
       "Final Round": 0,
@@ -80,6 +84,14 @@ export function AppliedOverview({
 
       <AppliedStatusFilters value={filter} onChange={setFilter} counts={counts} />
 
+      <OpenOnlineAssessmentsPanel
+        apps={apps}
+        onOpenGuidance={(app) => {
+          setOpenId(app.applicationId);
+          setOaModalAppId(app.applicationId);
+        }}
+      />
+
       <Reveal from="up" distance={24} delay={0.04}>
         <AppliedImportPanel
           jobs={jobs}
@@ -122,8 +134,11 @@ export function AppliedOverview({
                 postedDate={job?.postedDate ?? app.postedDate}
                 deadline={job?.deadline ?? app.deadline}
                 expanded={openId === app.applicationId}
+                openOaOnMount={oaModalAppId === app.applicationId}
+                onOaModalOpened={() => setOaModalAppId(null)}
                 onToggle={() => setOpenId(openId === app.applicationId ? null : app.applicationId)}
                 onStatusChange={(status) => setStatus(app.applicationId, status)}
+                onUpdateApplication={(patch) => updateApplication(app.applicationId, patch)}
               />
             );
           })

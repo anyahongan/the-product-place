@@ -118,6 +118,37 @@ export function savePracticeTarget(t: PracticeTarget) {
   localStorage.setItem(TARGET_KEY, JSON.stringify(t));
 }
 
+/** Map application / OA company names onto preset dropdown values when possible. */
+export function normalizeTargetCompany(company: string): string {
+  const key = company.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  for (const preset of COMPANY_OPTIONS) {
+    const presetKey = preset.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    if (key.includes(presetKey) || presetKey.includes(key)) return preset;
+  }
+  return company.trim();
+}
+
+export function roleFromJobTitle(title: string): string {
+  const t = title.toLowerCase();
+  if (t.includes("intern")) return "PM Intern";
+  if (t.includes("associate") || t.includes("apm")) return "APM / Associate PM";
+  if (t.includes("senior")) return "Senior Product Manager";
+  if (t.includes("product manager") || t.includes("product management")) return "Product Manager";
+  return "";
+}
+
+function mergePracticeTarget(
+  base: PracticeTarget,
+  override?: Partial<PracticeTarget>,
+): PracticeTarget {
+  if (!override) return base;
+  return {
+    company: override.company ? normalizeTargetCompany(override.company) : base.company,
+    role: override.role?.trim() ? override.role : base.role,
+    interviewType: override.interviewType?.trim() ? override.interviewType : base.interviewType,
+  };
+}
+
 function selectMode(
   stored: string,
   presets: readonly string[],
@@ -256,12 +287,15 @@ export function DrillSession({
   authReady,
   onBack,
   onSaved,
+  initialTarget,
 }: {
   question: PracticeQuestion;
   userId: string | null;
   authReady: boolean;
   onBack: () => void;
   onSaved: (row: PracticeAttemptRecord) => void;
+  /** When set (e.g. OA prep), pre-fills interview target fields. */
+  initialTarget?: Partial<PracticeTarget>;
 }) {
   const [phase, setPhase] = useState<"prompt" | "write" | "review">("prompt");
   const [response, setResponse] = useState("");
@@ -269,7 +303,9 @@ export function DrillSession({
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [target, setTarget] = useState<PracticeTarget>(() => loadPracticeTarget());
+  const [target, setTarget] = useState<PracticeTarget>(() =>
+    mergePracticeTarget(loadPracticeTarget(), initialTarget),
+  );
   const [grade, setGrade] = useState<PracticeGradeResult | null>(null);
   const [grading, setGrading] = useState(false);
   const [gradeError, setGradeError] = useState<string | null>(null);
@@ -277,6 +313,15 @@ export function DrillSession({
 
   const format = questionFormat(question);
   const isChoice = format === "multiple-choice" || format === "checkbox";
+
+  useEffect(() => {
+    if (!initialTarget?.company && !initialTarget?.role && !initialTarget?.interviewType) return;
+    setTarget((prev) => {
+      const next = mergePracticeTarget(prev, initialTarget);
+      savePracticeTarget(next);
+      return next;
+    });
+  }, [initialTarget?.company, initialTarget?.role, initialTarget?.interviewType, question.id]);
 
   useEffect(() => () => stopSpeaking(), []);
 

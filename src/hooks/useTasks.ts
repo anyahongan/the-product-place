@@ -28,6 +28,19 @@ export function useTasks() {
     }
   }, [tasks, hydrated]);
 
+  useEffect(() => {
+    const reload = () => {
+      try {
+        const raw = window.localStorage.getItem(KEY);
+        if (raw) setTasks(JSON.parse(raw) as Task[]);
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("tpp-tasks-updated", reload);
+    return () => window.removeEventListener("tpp-tasks-updated", reload);
+  }, []);
+
   const add = useCallback((text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;

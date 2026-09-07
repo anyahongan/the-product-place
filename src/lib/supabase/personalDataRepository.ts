@@ -106,6 +106,9 @@ export async function loadPersonalFromSupabase(userId: string): Promise<{
           catalogCompanyId?: string;
           postedDate?: string | null;
           deadline?: string | null;
+          materialsRequired?: ApplicationRecord["materialsRequired"];
+          onlineAssessment?: ApplicationRecord["onlineAssessment"];
+          experienceNotes?: string;
         }
       | null;
     // Prefer snapshot UI/legacy company id (co-*) so Network deep-links keep working.
@@ -133,6 +136,18 @@ export async function loadPersonalFromSupabase(userId: string): Promise<{
       tone: (a.tone as ToneName) || "blue",
       postedDate: snapshot?.postedDate ?? null,
       deadline: snapshot?.deadline ?? null,
+      materialsRequired: snapshot?.materialsRequired ?? {
+        resume: false,
+        coverLetter: false,
+        transcript: false,
+        gpa: false,
+      },
+      onlineAssessment: snapshot?.onlineAssessment ?? {
+        dueDate: null,
+        completed: false,
+        completedAt: null,
+      },
+      experienceNotes: snapshot?.experienceNotes ?? "",
     };
   });
 

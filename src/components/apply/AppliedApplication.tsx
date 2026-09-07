@@ -1,16 +1,30 @@
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Clip, Sheet, Tape } from "@/components/paper/Paper";
 import { ApplicationProgress } from "@/components/apply/ApplicationProgress";
 import { NetworkingSuggestions } from "@/components/apply/NetworkingSuggestions";
 import { NetworkInsightsPanel } from "@/components/apply/NetworkInsightsPanel";
+import {
+  ApplicationMaterialsChecklist,
+  materialsRequiredSummary,
+} from "@/components/apply/ApplicationMaterialsChecklist";
+import { OnlineAssessmentModal } from "@/components/apply/OnlineAssessmentModal";
+import { OpenOnlineAssessmentsPanel } from "@/components/apply/OpenOnlineAssessmentsPanel";
 import { formatShortDate } from "@/data/apply";
+import { getOnlineAssessmentGuide } from "@/lib/apply/onlineAssessmentGuides";
+import { isOpenOnlineAssessment } from "@/lib/apply/openOnlineAssessments";
 import { useRecruiting } from "@/components/recruiting/useRecruiting";
 import {
   notesForApplicationMaterials,
   referralContactsForApplication,
 } from "@/lib/recruiting/selectors";
 import { cn } from "@/lib/utils";
-import type { ApplicationLifecycleStatus, ApplicationRecord } from "@/lib/apply/types";
+import type {
+  ApplicationLifecycleStatus,
+  ApplicationRecord,
+  OnlineAssessmentState,
+} from "@/lib/apply/types";
 import type { ProgressStage, ToneName } from "@/types/apply";
 import { APPLICATION_STATUSES } from "@/lib/apply/types";
 
@@ -19,6 +33,7 @@ const statusStyle: Record<ApplicationLifecycleStatus, string> = {
   Preparing: "bg-yellow-wash text-ink",
   Applied: "bg-blue text-paper",
   Waiting: "bg-yellow text-ink",
+  "Online Assessment": "bg-purple text-paper",
   "Recruiter Screen": "bg-green text-paper",
   Interviewing: "bg-purple text-paper",
   "Final Round": "bg-purple text-paper",
@@ -40,6 +55,7 @@ function toProgress(app: ApplicationRecord): {
     Preparing: "Submitted",
     Applied: "Submitted",
     Waiting: "Submitted",
+    "Online Assessment": "Submitted",
     "Recruiter Screen": "Recruiter Screen",
     Interviewing: "Interview",
     "Final Round": "Final",
@@ -60,23 +76,63 @@ export function AppliedApplicationCard({
   expanded,
   onToggle,
   onStatusChange,
+  onUpdateApplication,
+  openOaOnMount,
+  onOaModalOpened,
 }: {
   app: ApplicationRecord;
   postedDate?: string | null;
   deadline?: string | null;
   expanded: boolean;
+  openOaOnMount?: boolean;
+  onOaModalOpened?: () => void;
   onToggle: () => void;
   onStatusChange: (status: ApplicationLifecycleStatus) => void;
+  onUpdateApplication: (
+    patch: Partial<
+      Pick<ApplicationRecord, "materialsRequired" | "onlineAssessment" | "experienceNotes">
+    >,
+  ) => void;
 }) {
   const reduced = useReducedMotion();
   const tone = cardTone(app.tone);
   const progress = toProgress(app);
   const { notes, contacts } = useRecruiting();
+  const [oaOpen, setOaOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(app.experienceNotes);
+  const materialsSummary = materialsRequiredSummary(app.materialsRequired);
+  const showOaPrep =
+    isOpenOnlineAssessment(app) || app.currentStatus === "Online Assessment";
+  const oaGuide = getOnlineAssessmentGuide(app.company);
+
+  useEffect(() => {
+    setNotesDraft(app.experienceNotes);
+  }, [app.applicationId, app.experienceNotes]);
+
+  useEffect(() => {
+    if (!openOaOnMount) return;
+    setOaOpen(true);
+    onOaModalOpened?.();
+  }, [openOaOnMount, onOaModalOpened]);
+
   const insights = notesForApplicationMaterials(notes, app.applicationId).map((note) => ({
     note,
     contact: contacts.find((c) => c.id === note.contactId),
   }));
   const referrals = referralContactsForApplication(contacts, app.applicationId);
+
+  const handleStatusClick = (status: ApplicationLifecycleStatus) => {
+    if (status === "Online Assessment") {
+      setOaOpen(true);
+      return;
+    }
+    onStatusChange(status);
+  };
+
+  const saveOnlineAssessment = (oa: OnlineAssessmentState, setStatus: boolean) => {
+    onUpdateApplication({ onlineAssessment: oa });
+    if (setStatus) onStatusChange("Online Assessment");
+  };
 
   return (
     <motion.article
@@ -114,9 +170,11 @@ export function AppliedApplicationCard({
               {app.dateApplied
                 ? `Applied ${formatShortDate(app.dateApplied)}`
                 : "Not marked applied yet"}
-              {" · "}
-              Resume: none yet
+              {materialsSummary ? ` · Asked: ${materialsSummary}` : ""}
             </p>
+            {app.onlineAssessment.dueDate && !app.onlineAssessment.completed && (
+              <p className="tag mt-2 text-purple">OA due {formatShortDate(app.onlineAssessment.dueDate)}</p>
+            )}
             {referrals[0] && (
               <p className="tag mt-2 uppercase text-ink">
                 Referral · {referrals[0].referralStatus} · {referrals[0].name}
@@ -149,11 +207,47 @@ export function AppliedApplicationCard({
               <div className="relative mt-6 border-t-2 border-ink pt-5">
                 <Clip className="absolute -top-8 right-4" size={44} color="blue" angle={-6} />
 
-                <h4 className="font-display text-[1.05rem] font-black uppercase">Materials used</h4>
-                <ul className="mt-2 space-y-1 text-[0.95rem] text-ink-soft">
-                  <li>Resume: {app.resumeUsed ?? "None attached yet"}</li>
-                  <li>Cover letter: {app.coverLetterUsed ?? "None attached yet"}</li>
-                </ul>
+                <h4 className="font-display text-[1.05rem] font-black uppercase">
+                  Application checklist
+                </h4>
+                <ApplicationMaterialsChecklist
+                  value={app.materialsRequired}
+                  onChange={(materialsRequired) => onUpdateApplication({ materialsRequired })}
+                />
+
+                {showOaPrep && (
+                  <div className="mt-5 border-2 border-ink bg-purple/10 px-4 py-4">
+                    <h4 className="font-display text-[1.05rem] font-black uppercase">
+                      Online assessment prep
+                    </h4>
+                    <p className="tag mt-1 text-ink-faint">{oaGuide.oaType}</p>
+                    <p className="mt-2 text-[0.9rem] leading-relaxed text-ink-soft">
+                      Company-specific OA prompts — product scenarios, metrics, written responses,
+                      and work-style items modeled on reported formats.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link
+                        to="/practice"
+                        search={{
+                          mode: "oa",
+                          company: app.company,
+                          appId: app.applicationId,
+                          oa: "1",
+                        }}
+                        className="focus-ink border-2 border-ink bg-yellow px-3 py-2 font-display text-xs font-black uppercase text-ink outline-none hover:bg-ink hover:text-paper"
+                      >
+                        OA prep →
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setOaOpen(true)}
+                        className="focus-ink border-2 border-ink bg-paper px-3 py-2 font-display text-xs font-black uppercase text-ink outline-none hover:bg-blue-wash"
+                      >
+                        Guidance & due date
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {(app.applyUrl || app.sourceUrl) && (
                   <div className="mt-5">
@@ -191,13 +285,15 @@ export function AppliedApplicationCard({
                 <h4 className="mt-5 font-display text-[1.05rem] font-black uppercase">
                   Update status
                 </h4>
-                <p className="tag mt-1 text-ink-faint">Saved locally on this device</p>
+                <p className="tag mt-1 text-ink-faint">
+                  Online Assessment opens guidance, due-date tracking, and practice prep.
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {APPLICATION_STATUSES.map((s) => (
                     <button
                       key={s}
                       type="button"
-                      onClick={() => onStatusChange(s)}
+                      onClick={() => handleStatusClick(s)}
                       aria-pressed={app.currentStatus === s}
                       className={cn(
                         "focus-ink tag border-2 border-ink px-2.5 py-1.5 uppercase outline-none",
@@ -209,6 +305,25 @@ export function AppliedApplicationCard({
                   ))}
                 </div>
 
+                <h4 className="mt-5 font-display text-[1.05rem] font-black uppercase">
+                  Your notes
+                </h4>
+                <p className="tag mt-1 text-ink-faint">
+                  Capture what happened — OA format, interview vibes, follow-ups.
+                </p>
+                <textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  onBlur={() => {
+                    if (notesDraft !== app.experienceNotes) {
+                      onUpdateApplication({ experienceNotes: notesDraft });
+                    }
+                  }}
+                  rows={5}
+                  placeholder="Example: OA was 90 min product scenarios + work style. Recruiter follow-up in 5 days…"
+                  className="focus-ink mt-2 w-full resize-y border-2 border-ink bg-paper px-3 py-2 text-[0.92rem] text-ink outline-none placeholder:text-ink-faint"
+                />
+
                 <NetworkInsightsPanel insights={insights} />
                 <NetworkingSuggestions application={app} />
               </div>
@@ -216,6 +331,13 @@ export function AppliedApplicationCard({
           )}
         </AnimatePresence>
       </Sheet>
+
+      <OnlineAssessmentModal
+        app={app}
+        open={oaOpen}
+        onClose={() => setOaOpen(false)}
+        onSave={saveOnlineAssessment}
+      />
     </motion.article>
   );
 }
@@ -233,6 +355,7 @@ export function AppliedStatusFilters({
     { id: "all", label: "All" },
     { id: "Waiting", label: "Waiting" },
     { id: "Applied", label: "Applied" },
+    { id: "Online Assessment", label: "OA" },
     { id: "Interviewing", label: "Interviewing" },
     { id: "Offer", label: "Offers" },
     { id: "Rejected", label: "Rejected" },
